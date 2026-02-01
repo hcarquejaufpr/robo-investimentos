@@ -427,7 +427,7 @@ if st.sidebar.button("💾 Salvar Configurações", type="primary", help="Salva 
                     data = parts[1].strip()
                     new_tesouro[nome] = {'data_compra': data}
         
-        # Processa multiplicadores individuais
+        # Processa multiplicadores individuais do text area (mantido por compatibilidade)
         new_individual_multipliers = {}
         for line in individual_mult_text.split('\n'):
             line = line.strip()
@@ -440,6 +440,21 @@ if st.sidebar.button("💾 Salvar Configurações", type="primary", help="Salva 
                         new_individual_multipliers[ticker] = mult
                 except ValueError:
                     st.sidebar.warning(f"⚠️ Linha ignorada (formato inválido): {line}")
+        
+        # Captura edições das tabelas (prioridade sobre text area)
+        if "edited_us" in st.session_state:
+            for _, row in st.session_state["edited_us"].iterrows():
+                ticker = row["Ticker"]
+                mult = row["ATR Mult."]
+                if pd.notna(mult) and mult > 0:
+                    new_individual_multipliers[ticker] = float(mult)
+        
+        if "edited_br" in st.session_state:
+            for _, row in st.session_state["edited_br"].iterrows():
+                ticker = row["Ticker"]
+                mult = row["ATR Mult."]
+                if pd.notna(mult) and mult > 0:
+                    new_individual_multipliers[ticker] = float(mult)
         
         # Cria o objeto de carteira do usuário
         user_portfolio = {
@@ -646,15 +661,31 @@ col1, col2 = st.columns(2)
 
 with col1:
     st.subheader("🇺🇸 Ações Americanas")
-    st.caption("💡 **Dica:** RSI acima de 70 indica sobrecompra (topo), abaixo de 30 indica sobrevenda (fundo)")
+    st.caption("💡 **Dica:** Edite a coluna 'ATR Mult.' para ajustar o stop de cada ativo individualmente")
     if US_STOCKS:
         st.caption(f"📊 Analisando {len(US_STOCKS)} ticker(s): {', '.join(US_STOCKS)}")
         df_us = get_market_data(US_STOCKS, mult_us, individual_multipliers=INDIVIDUAL_MULTIPLIERS)
         if not df_us.empty:
-            st.dataframe(
+            # Configura colunas editáveis
+            edited_df_us = st.data_editor(
                 df_us[["Ticker", "Preço Atual", "RSI (Termômetro)", "Stop Loss Sugerido", "Distância (%)", "Tendência", "ATR Mult."]],
-                use_container_width=True
+                use_container_width=True,
+                column_config={
+                    "ATR Mult.": st.column_config.NumberColumn(
+                        "ATR Mult. 🎯",
+                        help="Multiplicador do ATR para calcular o stop loss. Clique para editar!",
+                        min_value=0.1,
+                        max_value=5.0,
+                        step=0.1,
+                        format="%.1f",
+                    ),
+                },
+                disabled=["Ticker", "Preço Atual", "RSI (Termômetro)", "Stop Loss Sugerido", "Distância (%)", "Tendência"],
+                hide_index=True,
+                key="editor_us"
             )
+            # Armazena no session_state para salvar depois
+            st.session_state["edited_us"] = edited_df_us
         else:
             st.warning("Nenhum dado disponível para ações americanas")
     else:
@@ -662,15 +693,31 @@ with col1:
 
 with col2:
     st.subheader("🇧🇷 FIIs Brasileiros")
-    st.caption("💡 **Dica:** FIIs são menos voláteis. Stops mais próximos (1.0x ATR) são geralmente adequados")
+    st.caption("💡 **Dica:** Edite a coluna 'ATR Mult.' para ajustar o stop de cada ativo individualmente")
     if BR_FIIS:
         st.caption(f"📊 Analisando {len(BR_FIIS)} ticker(s): {', '.join(BR_FIIS)}")
         df_br = get_market_data(BR_FIIS, mult_br, individual_multipliers=INDIVIDUAL_MULTIPLIERS)
         if not df_br.empty:
-            st.dataframe(
+            # Configura colunas editáveis
+            edited_df_br = st.data_editor(
                 df_br[["Ticker", "Preço Atual", "RSI (Termômetro)", "Stop Loss Sugerido", "Distância (%)", "Tendência", "ATR Mult."]],
-                use_container_width=True
+                use_container_width=True,
+                column_config={
+                    "ATR Mult.": st.column_config.NumberColumn(
+                        "ATR Mult. 🎯",
+                        help="Multiplicador do ATR para calcular o stop loss. Clique para editar!",
+                        min_value=0.1,
+                        max_value=5.0,
+                        step=0.1,
+                        format="%.1f",
+                    ),
+                },
+                disabled=["Ticker", "Preço Atual", "RSI (Termômetro)", "Stop Loss Sugerido", "Distância (%)", "Tendência"],
+                hide_index=True,
+                key="editor_br"
             )
+            # Armazena no session_state para salvar depois
+            st.session_state["edited_br"] = edited_df_br
         else:
             st.warning("Nenhum dado disponível para FIIs")
     else:
