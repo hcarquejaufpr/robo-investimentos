@@ -265,6 +265,9 @@ PARAMETROS = user_portfolio.get("PARAMETROS", {"MULTIPLIER_US": 1.2, "MULTIPLIER
 # Multiplicadores individuais por ticker (opcional)
 INDIVIDUAL_MULTIPLIERS = user_portfolio.get("INDIVIDUAL_MULTIPLIERS", {})
 
+# Quantidades de ativos (para cálculo de ganho/perda)
+ASSET_QUANTITIES = user_portfolio.get("ASSET_QUANTITIES", {})
+
 # ============================================================================
 # APP PRINCIPAL (só executa se autenticado)
 # ============================================================================
@@ -409,6 +412,39 @@ with st.sidebar.expander("🎯 Multiplicador ATR por Ativo", expanded=False):
         help="Deixe em branco para usar os multiplicadores padrão. Defina apenas os tickers que quer personalizar."
     )
 
+# --- Quantidades de Ativos ---
+with st.sidebar.expander("📊 Quantidade de Ativos (Opcional)", expanded=False):
+    st.markdown("""
+    **Cadastre quantas ações/cotas você possui!**
+    
+    Com isso você verá:
+    - 💰 Valor total da posição
+    - 🎯 Ganho potencial em $ (se atingir alvos)
+    - 🛑 Perda potencial em $ (se acionar stops)
+    
+    Formato: `TICKER: quantidade`
+    
+    Exemplos:
+    ```
+    AAPL: 100
+    NVDA: 50
+    HGLG11: 200
+    ```
+    """)
+    
+    # Converte dicionário em texto editável
+    quantity_lines = []
+    for ticker, qty in ASSET_QUANTITIES.items():
+        quantity_lines.append(f"{ticker}: {qty}")
+    
+    quantity_text = st.text_area(
+        "Quantidades por ticker",
+        value="\n".join(quantity_lines),
+        height=150,
+        key="asset_quantities",
+        help="Deixe em branco se não quiser ver cálculos financeiros. Útil para análise de portfólio."
+    )
+
 if st.sidebar.button("💾 Salvar Configurações", type="primary", help="Salva sua carteira pessoal (ativos e parâmetros). Seus dados ficam separados de outros usuários."):
     try:
         # Processa ações americanas
@@ -456,6 +492,20 @@ if st.sidebar.button("💾 Salvar Configurações", type="primary", help="Salva 
                 if pd.notna(mult) and mult > 0:
                     new_individual_multipliers[ticker] = float(mult)
         
+        # Processa quantidades de ativos
+        new_asset_quantities = {}
+        for line in quantity_text.split('\n'):
+            line = line.strip()
+            if ':' in line:
+                try:
+                    ticker, qty = line.split(':', 1)
+                    ticker = ticker.strip().upper()
+                    qty = int(qty.strip())
+                    if qty > 0:  # Valida quantidade positiva
+                        new_asset_quantities[ticker] = qty
+                except ValueError:
+                    st.sidebar.warning(f"⚠️ Linha ignorada (formato inválido): {line}")
+        
         # Cria o objeto de carteira do usuário
         user_portfolio = {
             "US_STOCKS": new_us_stocks,
@@ -465,7 +515,8 @@ if st.sidebar.button("💾 Salvar Configurações", type="primary", help="Salva 
                 "MULTIPLIER_US": mult_us,
                 "MULTIPLIER_BR": mult_br
             },
-            "INDIVIDUAL_MULTIPLIERS": new_individual_multipliers
+            "INDIVIDUAL_MULTIPLIERS": new_individual_multipliers,
+            "ASSET_QUANTITIES": new_asset_quantities
         }
         
         # Salva a carteira específica deste usuário
@@ -480,13 +531,16 @@ if st.sidebar.button("💾 Salvar Configurações", type="primary", help="Salva 
 # --- Funções de Cálculo ---
 
 @st.cache_data(ttl=300) # Cache de 5 minutos
-def get_market_data(tickers, multiplier, individual_multipliers=None):
+def get_market_data(tickers, multiplier, individual_multipliers=None, asset_quantities=None):
     """Baixa dados, calcula ATR, RSI e define Stop Loss."""
     if not tickers:
         return pd.DataFrame()
     
     if individual_multipliers is None:
         individual_multipliers = {}
+    
+    if asset_quantities is None:
+        asset_quantities = {}
     
     data_list = []
     errors = []
@@ -590,17 +644,36 @@ def get_market_data(tickers, multiplier, individual_multipliers=None):
             atr_percent = (last_atr / last_close) * 100
             
             # ================================================================
+            # CÁLCULOS FINANCEIROS (se quantidade informada)
+            # ================================================================
+            
+            quantity = asset_quantities.get(ticker_clean, 0)
+            
+            if quantity > 0:
+                position_value = last_close * quantity
+                gain_if_target = (gain_target - last_close) * quantity
+                loss_if_stop = (last_close - stop_price) * quantity
+            else:
+                position_value = 0
+                gain_if_target = 0
+                loss_if_stop = 0
+            
+            # ================================================================
             # ADICIONA AO RESULTADO
             # ================================================================
             
             data_list.append({
                 "Ticker": ticker_clean,
+                "Qtd": quantity if quantity > 0 else "-",
+                "Valor Posição": position_value if quantity > 0 else "-",
                 "Preço Atual": last_close,
                 "ATR %": atr_percent,  # Volatilidade percentual
                 "RSI (Termômetro)": rsi_status,
                 "Stop Loss Sugerido": stop_price,
                 "Alvo (Gain)": gain_target,
                 "Potencial": gain_potential_display,  # Com aviso visual
+                "Ganho se Alvo": gain_if_target if quantity > 0 else "-",
+                "Perda se Stop": loss_if_stop if quantity > 0 else "-",
                 "Distância Stop (%)": ((last_close - stop_price) / last_close) * 100,
                 "ATR Mult.": current_multiplier,
                 "Tendência": tendencia,
@@ -726,14 +799,33 @@ st.subheader("🇺🇸 Ações Americanas")
 st.caption("💡 **Dica:** RSI > 70 ativa stop automático em 1.0x ATR (proteção de lucro). Edite 'ATR Mult.' para personalizar.")
 if US_STOCKS:
     st.caption(f"📊 Analisando {len(US_STOCKS)} ticker(s): {', '.join(US_STOCKS)}")
-    df_us = get_market_data(US_STOCKS, mult_us, individual_multipliers=INDIVIDUAL_MULTIPLIERS)
+    df_us = get_market_data(US_STOCKS, mult_us, individual_multipliers=INDIVIDUAL_MULTIPLIERS, asset_quantities=ASSET_QUANTITIES)
     if not df_us.empty:
+        # Define quais colunas mostrar (depende se tem quantidades cadastradas)
+        has_quantities = any(df_us["Qtd"] != "-")
+        
+        if has_quantities:
+            display_columns = ["Ticker", "Qtd", "Valor Posição", "Preço Atual", "ATR %", "RSI (Termômetro)", 
+                             "Stop Loss Sugerido", "Alvo (Gain)", "Ganho se Alvo", "Perda se Stop", 
+                             "Potencial", "Tendência", "ATR Mult."]
+        else:
+            display_columns = ["Ticker", "Preço Atual", "ATR %", "RSI (Termômetro)", 
+                             "Stop Loss Sugerido", "Alvo (Gain)", "Potencial", "Distância Stop (%)", 
+                             "Tendência", "ATR Mult."]
+        
         # Configura colunas editáveis
         edited_df_us = st.data_editor(
-            df_us[["Ticker", "Preço Atual", "ATR %", "RSI (Termômetro)", "Stop Loss Sugerido", "Alvo (Gain)", "Potencial", "Distância Stop (%)", "Tendência", "ATR Mult."]],
+            df_us[display_columns],
             use_container_width=True,
             column_config={
                 "Ticker": st.column_config.TextColumn("Ticker", disabled=True),
+                "Qtd": st.column_config.TextColumn("Qtd", disabled=True),
+                "Valor Posição": st.column_config.NumberColumn(
+                    "Valor Posição",
+                    format="$%.0f",
+                    help="Valor total investido neste ativo (Quantidade × Preço Atual)",
+                    disabled=True
+                ),
                 "Preço Atual": st.column_config.NumberColumn(
                     "Preço Atual",
                     format="$%.1f",
@@ -756,6 +848,18 @@ if US_STOCKS:
                     "Alvo (Gain) 🎯",
                     format="$%.1f",
                     help="Preço alvo de lucro (2.0x ATR acima do preço atual). Meta de venda estratégica.",
+                    disabled=True
+                ),
+                "Ganho se Alvo": st.column_config.NumberColumn(
+                    "Ganho $ 🎯",
+                    format="$%.0f",
+                    help="Lucro em dólares se atingir o alvo (Quantidade × Diferença de preço)",
+                    disabled=True
+                ),
+                "Perda se Stop": st.column_config.NumberColumn(
+                    "Perda $ 🛑",
+                    format="$%.0f",
+                    help="Perda em dólares se acionar o stop (Quantidade × Diferença de preço)",
                     disabled=True
                 ),
                 "Potencial": st.column_config.TextColumn(
@@ -798,14 +902,33 @@ st.subheader("🇧🇷 FIIs Brasileiros")
 st.caption("💡 **Dica:** RSI > 70 ativa stop automático em 1.0x ATR (proteção de lucro). Edite 'ATR Mult.' para personalizar.")
 if BR_FIIS:
     st.caption(f"📊 Analisando {len(BR_FIIS)} ticker(s): {', '.join(BR_FIIS)}")
-    df_br = get_market_data(BR_FIIS, mult_br, individual_multipliers=INDIVIDUAL_MULTIPLIERS)
+    df_br = get_market_data(BR_FIIS, mult_br, individual_multipliers=INDIVIDUAL_MULTIPLIERS, asset_quantities=ASSET_QUANTITIES)
     if not df_br.empty:
+        # Define quais colunas mostrar (depende se tem quantidades cadastradas)
+        has_quantities_br = any(df_br["Qtd"] != "-")
+        
+        if has_quantities_br:
+            display_columns_br = ["Ticker", "Qtd", "Valor Posição", "Preço Atual", "ATR %", "RSI (Termômetro)", 
+                                 "Stop Loss Sugerido", "Alvo (Gain)", "Ganho se Alvo", "Perda se Stop", 
+                                 "Potencial", "Tendência", "ATR Mult."]
+        else:
+            display_columns_br = ["Ticker", "Preço Atual", "ATR %", "RSI (Termômetro)", 
+                                 "Stop Loss Sugerido", "Alvo (Gain)", "Potencial", "Distância Stop (%)", 
+                                 "Tendência", "ATR Mult."]
+        
         # Configura colunas editáveis
         edited_df_br = st.data_editor(
-            df_br[["Ticker", "Preço Atual", "ATR %", "RSI (Termômetro)", "Stop Loss Sugerido", "Alvo (Gain)", "Potencial", "Distância Stop (%)", "Tendência", "ATR Mult."]],
+            df_br[display_columns_br],
             use_container_width=True,
             column_config={
                 "Ticker": st.column_config.TextColumn("Ticker", disabled=True),
+                "Qtd": st.column_config.TextColumn("Qtd", disabled=True),
+                "Valor Posição": st.column_config.NumberColumn(
+                    "Valor Posição",
+                    format="R$ %.0f",
+                    help="Valor total investido neste ativo (Quantidade × Preço Atual)",
+                    disabled=True
+                ),
                 "Preço Atual": st.column_config.NumberColumn(
                     "Preço Atual",
                     format="R$ %.1f",
@@ -828,6 +951,18 @@ if BR_FIIS:
                     "Alvo (Gain) 🎯",
                     format="R$ %.1f",
                     help="Preço alvo de lucro (2.0x ATR acima do preço atual). Meta de venda estratégica.",
+                    disabled=True
+                ),
+                "Ganho se Alvo": st.column_config.NumberColumn(
+                    "Ganho R$ 🎯",
+                    format="R$ %.0f",
+                    help="Lucro em reais se atingir o alvo (Quantidade × Diferença de preço)",
+                    disabled=True
+                ),
+                "Perda se Stop": st.column_config.NumberColumn(
+                    "Perda R$ 🛑",
+                    format="R$ %.0f",
+                    help="Perda em reais se acionar o stop (Quantidade × Diferença de preço)",
                     disabled=True
                 ),
                 "Potencial": st.column_config.TextColumn(
@@ -862,6 +997,72 @@ if BR_FIIS:
         st.warning("Nenhum dado disponível para FIIs")
 else:
     st.info("Adicione FIIs em config.py")
+
+# --- Resumo Financeiro ---
+if ASSET_QUANTITIES:
+    st.markdown("---")
+    st.header("💰 Resumo da Carteira")
+    
+    # Combina dataframes US e BR
+    dfs_to_combine = []
+    if US_STOCKS and 'df_us' in locals() and not df_us.empty:
+        dfs_to_combine.append(df_us)
+    if BR_FIIS and 'df_br' in locals() and not df_br.empty:
+        dfs_to_combine.append(df_br)
+    
+    if dfs_to_combine:
+        df_combined = pd.concat(dfs_to_combine, ignore_index=True)
+        
+        # Filtra apenas ativos com quantidade
+        df_with_qty = df_combined[df_combined["Qtd"] != "-"].copy()
+        
+        if not df_with_qty.empty:
+            # Calcula totais
+            total_invested = df_with_qty["Valor Posição"].sum()
+            total_gain_if_target = df_with_qty["Ganho se Alvo"].sum()
+            total_loss_if_stop = df_with_qty["Perda se Stop"].sum()
+            
+            # Relação risco/retorno
+            if total_loss_if_stop > 0:
+                risk_reward_ratio = total_gain_if_target / total_loss_if_stop
+            else:
+                risk_reward_ratio = 0
+            
+            # Exibe resumo em colunas
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                st.metric(
+                    label="📊 Valor Total Investido",
+                    value=f"${total_invested:,.0f}" if US_STOCKS else f"R$ {total_invested:,.0f}",
+                    help="Soma do valor atual de todas as posições"
+                )
+            
+            with col2:
+                st.metric(
+                    label="🎯 Ganho Potencial Total",
+                    value=f"${total_gain_if_target:,.0f}" if US_STOCKS else f"R$ {total_gain_if_target:,.0f}",
+                    delta=f"+{(total_gain_if_target/total_invested)*100:.1f}%",
+                    help="Lucro se todos os ativos atingirem seus alvos"
+                )
+            
+            with col3:
+                st.metric(
+                    label="🛑 Perda Máxima Total",
+                    value=f"${total_loss_if_stop:,.0f}" if US_STOCKS else f"R$ {total_loss_if_stop:,.0f}",
+                    delta=f"-{(total_loss_if_stop/total_invested)*100:.1f}%",
+                    delta_color="inverse",
+                    help="Perda se todos os stops forem acionados"
+                )
+            
+            with col4:
+                st.metric(
+                    label="📈 Relação Risco/Retorno",
+                    value=f"{risk_reward_ratio:.2f}:1",
+                    help="Quanto você pode ganhar para cada R$1 de risco"
+                )
+            
+            st.info("💡 **Dica:** Uma relação risco/retorno > 2:1 é considerada boa para swing trading.")
 
 # 2. Otimização Fiscal
 st.header("💰 Tesouro Direto: Análise de IR")
