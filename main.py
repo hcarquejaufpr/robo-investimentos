@@ -1171,11 +1171,11 @@ if US_STOCKS:
         if has_quantities:
             display_columns = ["Ticker", "Qtd", "Valor Posição", "Preço Atual", "ATR %", "RSI (Termômetro)", 
                              "Stop Loss Sugerido", "Alvo (Gain)", "Ganho se Alvo", "Perda se Stop", 
-                             "Potencial", "Tendência", "ATR Mult."]
+                             "Potencial", "Tendência", "ATR Mult. ⚙️"]
         else:
             display_columns = ["Ticker", "Preço Atual", "ATR %", "RSI (Termômetro)", 
                              "Stop Loss Sugerido", "Alvo (Gain)", "Potencial", "Distância Stop (%)", 
-                             "Tendência", "ATR Mult."]
+                             "Tendência", "ATR Mult. ⚙️"]
         
         # Configura colunas editáveis
         edited_df_us = st.data_editor(
@@ -1238,14 +1238,10 @@ if US_STOCKS:
                     disabled=True
                 ),
                 "Tendência": st.column_config.TextColumn("Tendência", disabled=True),
-                "ATR Mult.": st.column_config.NumberColumn(
+                "ATR Mult. ⚙️": st.column_config.TextColumn(
                     "ATR Mult. ⚙️",
-                    help="Multiplicador do ATR para calcular o stop loss. Clique duplo para editar!",
-                    min_value=0.1,
-                    max_value=5.0,
-                    step=0.1,
-                    format="%.1fx",
-                    required=True,
+                    help="🛡️ 1.0x (RSI≥70, Baixa) = Proteção automática | ✏️ = Ajuste manual | Sem ícone = Slider padrão",
+                    disabled=True
                 ),
             },
             num_rows="fixed",
@@ -1274,11 +1270,11 @@ if BR_FIIS:
         if has_quantities_br:
             display_columns_br = ["Ticker", "Qtd", "Valor Posição", "Preço Atual", "ATR %", "RSI (Termômetro)", 
                                  "Stop Loss Sugerido", "Alvo (Gain)", "Ganho se Alvo", "Perda se Stop", 
-                                 "Potencial", "Tendência", "ATR Mult."]
+                                 "Potencial", "Tendência", "ATR Mult. ⚙️"]
         else:
             display_columns_br = ["Ticker", "Preço Atual", "ATR %", "RSI (Termômetro)", 
                                  "Stop Loss Sugerido", "Alvo (Gain)", "Potencial", "Distância Stop (%)", 
-                                 "Tendência", "ATR Mult."]
+                                 "Tendência", "ATR Mult. ⚙️"]
         
         # Configura colunas editáveis
         edited_df_br = st.data_editor(
@@ -1341,14 +1337,10 @@ if BR_FIIS:
                     disabled=True
                 ),
                 "Tendência": st.column_config.TextColumn("Tendência", disabled=True),
-                "ATR Mult.": st.column_config.NumberColumn(
+                "ATR Mult. ⚙️": st.column_config.TextColumn(
                     "ATR Mult. ⚙️",
-                    help="Multiplicador do ATR para calcular o stop loss. Clique duplo para editar!",
-                    min_value=0.1,
-                    max_value=5.0,
-                    step=0.1,
-                    format="%.1fx",
-                    required=True,
+                    help="🛡️ 1.0x (RSI≥70, Baixa) = Proteção automática | ✏️ = Ajuste manual | Sem ícone = Slider padrão",
+                    disabled=True
                 ),
             },
             num_rows="fixed",
