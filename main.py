@@ -1432,8 +1432,13 @@ else:
 
 # --- Resumo Financeiro ---
 if ASSET_QUANTITIES:
-    st.markdown("---")
-    st.header("💰 Resumo da Carteira")
+    # Verifica se os dataframes existem (se o usuário clicou em Atualizar Cotações)
+    if ('df_us' not in locals() or df_us.empty) and ('df_br' not in locals() or df_br.empty):
+        st.markdown("---")
+        st.info("💡 **Clique em '🔄 Atualizar Cotações' para ver o resumo da carteira e gráficos!**")
+    else:
+        st.markdown("---")
+        st.header("💰 Resumo da Carteira")
     
     # Combina dataframes US e BR
     dfs_to_combine = []
