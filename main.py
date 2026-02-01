@@ -617,13 +617,13 @@ if st.sidebar.button("🔄 Atualizar Cotações", help="Recarrega os dados do me
 st.sidebar.markdown("---")
 st.sidebar.header("📝 Gerenciar Ativos")
 
-with st.sidebar.expander("🇺🇸 Ações Americanas", expanded=False):
+with st.sidebar.expander("🇺🇸 Ações e ETFs (EUA)", expanded=False):
     us_stocks_text = st.text_area(
-        "Um ticker por linha (ex: AAPL)",
+        "Um ticker por linha (ex: AAPL, SPY, QQQ)",
         value="\n".join(US_STOCKS),
         height=100,
         key="us_stocks",
-        help="Digite os tickers das ações americanas, um por linha. Exemplos: AAPL, MSFT, NVDA, GOOGL, TSLA, AMZN"
+        help="Digite os tickers de ações e ETFs americanos, um por linha. Exemplos de Ações: AAPL, MSFT, NVDA, GOOGL, TSLA. Exemplos de ETFs: SPY, QQQ, VTI, VOO"
     )
 
 with st.sidebar.expander("🇧🇷 FIIs Brasileiros", expanded=False):
@@ -928,8 +928,9 @@ def get_market_data(tickers, multiplier, individual_multipliers=None, asset_quan
             last_sma = float(df['SMA_20'].iloc[-1])
             last_rsi = float(df['RSI'].iloc[-1])
             
-            # Usa multiplicador individual se existir, senão usa o padrão
+            # Usa multiplicador individual se existir (PRIORIDADE: ajuste manual prevalece)
             ticker_clean = ticker.replace(".SA", "")
+            has_manual_adjustment = ticker_clean in individual_multipliers
             current_multiplier = individual_multipliers.get(ticker_clean, multiplier)
             
             # ================================================================
@@ -938,14 +939,18 @@ def get_market_data(tickers, multiplier, individual_multipliers=None, asset_quan
             
             if last_rsi >= 70:
                 rsi_status = f"🔥 ALERTA: CARO ({last_rsi:.1f})"
-                # LÓGICA INTELIGENTE: RSI > 70 = Sobrecomprado → Stop mais apertado automaticamente
-                stop_multiplier = 1.0  # Proteção agressiva em topos
+                # LÓGICA INTELIGENTE: RSI > 70 = Sobrecomprado → Stop 1.0x ATR
+                # MAS: Respeita ajuste manual se existir
+                if has_manual_adjustment:
+                    stop_multiplier = current_multiplier  # Mantém ajuste manual
+                else:
+                    stop_multiplier = 1.0  # Proteção automática em topos
             elif last_rsi <= 30:
                 rsi_status = f"❄️ Barato ({last_rsi:.1f})"
-                stop_multiplier = current_multiplier  # Usa o multiplicador normal
+                stop_multiplier = current_multiplier  # Usa o multiplicador configurado
             else:
                 rsi_status = f"Neutro ({last_rsi:.1f})"
-                stop_multiplier = current_multiplier  # Usa o multiplicador normal
+                stop_multiplier = current_multiplier  # Usa o multiplicador configurado
             
             # ================================================================
             # CÁLCULO DE PREÇOS ESTRATÉGICOS
@@ -1069,64 +1074,35 @@ st.header("📊 Renda Variável: Ações e FIIs")
 # Explicação dos indicadores
 with st.expander("❓ Como interpretar a tabela", expanded=False):
     st.markdown("""
-    ### 📖 Guia de Leitura da Análise Completa
+    ### � Colunas da Tabela
     
-    **🎯 Preço Atual:** Último preço de fechamento do ativo
-    
-    ---
-    
-    ### 📊 O que é ATR (Average True Range)?
-    
-    **ATR = Volatilidade Média do Ativo nos últimos 14 dias**
-    
-    É um indicador técnico que mede o quanto o preço do ativo costuma variar diariamente:
-    - **ATR Alto** → Ativo volátil (oscila muito). Ex: ações de tecnologia, small caps
-    - **ATR Baixo** → Ativo estável (oscila pouco). Ex: FIIs, empresas consolidadas
-    
-    **Por que usar ATR?**
-    - **Stops Inteligentes:** Em vez de usar valores fixos ($5, $10), o stop se adapta à volatilidade do ativo
-    - **Comparação Justa:** Um stop de "1.0x ATR" significa "1 oscilação normal" para qualquer ativo
-    - **Evita Falsos Sinais:** Stops muito apertados em ativos voláteis causam vendas desnecessárias
-    
-    **Exemplo Prático:**
-    - AAPL com ATR de $5 → Stop em 1.2x ATR = $6 de folga
-    - FII com ATR de R$0.50 → Stop em 1.0x ATR = R$0.50 de folga
+    | Coluna | Significado |
+    |--------|-------------|
+    | **Ticker** | Código do ativo |
+    | **Qtd** | Quantidade de ações/cotas que você possui |
+    | **Valor Posição** | Valor total investido (Qtd × Preço Atual) |
+    | **Preço Atual** | Último preço de fechamento |
+    | **ATR %** | Volatilidade diária média (<2% estável, >5% volátil) |
+    | **RSI** | 🔥 Caro (>70) / ❄️ Barato (<30) / Neutro (30-70) |
+    | **Stop Loss 🛑** | Preço de saída para limitar perdas |
+    | **Alvo (Gain) 🎯** | Meta de lucro projetada |
+    | **Ganho $ 🎯** | Lucro em $ se atingir o alvo |
+    | **Perda $ 🛑** | Perda em $ se acionar o stop |
+    | **Potencial** | Ganho % até o alvo (⚠️ = contra tendência) |
+    | **Tendência** | 🟢 Alta (acima SMA 20) / 🔴 Baixa (abaixo SMA 20) |
+    | **ATR Mult.** | Ajuste individual do stop (editável) |
     
     ---
     
-    **🌡️ RSI (Termômetro):**
-    - 🔥 **ALERTA: CARO (≥70)** → Ativo em sobrecompra, possível topo. **AUTOMÁTICO:** Stop ajustado para 1.0x ATR (proteção de lucro).
-    - ❄️ **Barato (≤30)** → Ativo em sobrevenda, possível fundo. Oportunidade de compra (se tendência favorável).
-    - **Neutro (31-69)** → Zona normal, sem extremos.
-    
-    **🛑 Stop Loss:** Preço de venda automática para limitar perdas (calculado com ATR × multiplicador). 
-    - Fórmula: `Stop = Preço Atual - (ATR × Multiplicador)`
-    - RSI > 70? Sistema ajusta para 1.0x ATR automaticamente (proteção agressiva em topos).
-    
-    **🎯 Alvo (Gain):** Meta de lucro projetada baseada em volatilidade.
-    - Fórmula: `Alvo = Preço Atual + (ATR × 2.0)`
-    - Projeta um movimento de alta equivalente a 2 oscilações normais do ativo.
-    
-    **📈 Potencial:** Ganho percentual esperado se atingir o alvo.
-    - **Sem aviso:** Alvo alinhado com tendência de alta (ex: `4.5%`)
-    - **Com ⚠️:** Alvo contra tendência de baixa (ex: `6.7% ⚠️`) - Operação mais arriscada, requer reversão
-    - Compare com "Risco (%)" para avaliar relação risco/retorno.
-    
-    **⚠️ Risco (%):** Distância percentual até o stop loss (quanto pode cair antes de acionar a venda).
-    
-    **📈 Tendência (SMA 20 dias):** 
-    - 🟢 **Alta** → Preço acima da média móvel dos últimos 20 dias. Momento ascendente.
-    - 🔴 **Baixa** → Preço abaixo da média móvel. Momento descendente.
-    
-    **⚙️ ATR Mult.:** Multiplicador editável. Clique duplo para personalizar o stop de cada ativo individualmente.
-    - Conservador: 0.5x - 1.0x (stops mais apertados)
-    - Moderado: 1.2x - 1.5x (equilíbrio)
-    - Agressivo: 2.0x - 3.0x (stops mais largos, maior tolerância)
+    ### 💡 Dicas Rápidas:
+    - **RSI > 70 (Caro):** Sistema aplica automaticamente stop 1.0x ATR para proteger lucros
+    - **Ajuste manual:** Clique duplo em "ATR Mult." para personalizar cada ativo
+    - **Sliders do painel:** Não afetam ativos com ajuste manual
     """)
 
-# Ações Americanas
-st.subheader("🇺🇸 Ações Americanas")
-st.caption("💡 **Dica:** RSI > 70 ativa stop automático em 1.0x ATR (proteção de lucro). Edite 'ATR Mult.' para personalizar.")
+# Renda Variável EUA (Ações e ETFs)
+st.subheader("🇺🇸 Renda Variável EUA (Ações e ETFs)")
+st.caption("💡 **Dica:** RSI > 70 ativa stop 1.0x ATR automaticamente (salvo ajuste manual). Clique duplo em 'ATR Mult.' para personalizar.")
 if US_STOCKS:
     st.caption(f"📊 Analisando {len(US_STOCKS)} ticker(s): {', '.join(US_STOCKS)}")
     df_us = get_market_data(US_STOCKS, mult_us, individual_multipliers=INDIVIDUAL_MULTIPLIERS, asset_quantities=ASSET_QUANTITIES)
