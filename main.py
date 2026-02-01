@@ -586,6 +586,9 @@ def get_market_data(tickers, multiplier, individual_multipliers=None):
             else:
                 gain_potential_display = f"{gain_potential_value:.1f}%"
             
+            # ATR como porcentagem do preço (mais prático para decisões)
+            atr_percent = (last_atr / last_close) * 100
+            
             # ================================================================
             # ADICIONA AO RESULTADO
             # ================================================================
@@ -593,7 +596,7 @@ def get_market_data(tickers, multiplier, individual_multipliers=None):
             data_list.append({
                 "Ticker": ticker_clean,
                 "Preço Atual": last_close,
-                "ATR (14d)": last_atr,  # Volatilidade calculada
+                "ATR %": atr_percent,  # Volatilidade percentual
                 "RSI (Termômetro)": rsi_status,
                 "Stop Loss Sugerido": stop_price,
                 "Alvo (Gain)": gain_target,
@@ -727,7 +730,7 @@ if US_STOCKS:
     if not df_us.empty:
         # Configura colunas editáveis
         edited_df_us = st.data_editor(
-            df_us[["Ticker", "Preço Atual", "ATR (14d)", "RSI (Termômetro)", "Stop Loss Sugerido", "Alvo (Gain)", "Potencial", "Distância Stop (%)", "Tendência", "ATR Mult."]],
+            df_us[["Ticker", "Preço Atual", "ATR %", "RSI (Termômetro)", "Stop Loss Sugerido", "Alvo (Gain)", "Potencial", "Distância Stop (%)", "Tendência", "ATR Mult."]],
             use_container_width=True,
             column_config={
                 "Ticker": st.column_config.TextColumn("Ticker", disabled=True),
@@ -736,10 +739,10 @@ if US_STOCKS:
                     format="$%.1f",
                     disabled=True
                 ),
-                "ATR (14d)": st.column_config.NumberColumn(
-                    "ATR (14d)",
-                    format="$%.2f",
-                    help="Volatilidade média dos últimos 14 dias. Base para cálculo de stops e alvos.",
+                "ATR %": st.column_config.NumberColumn(
+                    "Volatilidade %",
+                    format="%.1f%%",
+                    help="Oscilação diária média. <2% = estável, 2-5% = moderado, >5% = volátil.",
                     disabled=True
                 ),
                 "RSI (Termômetro)": st.column_config.TextColumn("RSI (Termômetro)", disabled=True),
@@ -799,7 +802,7 @@ if BR_FIIS:
     if not df_br.empty:
         # Configura colunas editáveis
         edited_df_br = st.data_editor(
-            df_br[["Ticker", "Preço Atual", "ATR (14d)", "RSI (Termômetro)", "Stop Loss Sugerido", "Alvo (Gain)", "Potencial", "Distância Stop (%)", "Tendência", "ATR Mult."]],
+            df_br[["Ticker", "Preço Atual", "ATR %", "RSI (Termômetro)", "Stop Loss Sugerido", "Alvo (Gain)", "Potencial", "Distância Stop (%)", "Tendência", "ATR Mult."]],
             use_container_width=True,
             column_config={
                 "Ticker": st.column_config.TextColumn("Ticker", disabled=True),
@@ -808,10 +811,10 @@ if BR_FIIS:
                     format="R$ %.1f",
                     disabled=True
                 ),
-                "ATR (14d)": st.column_config.NumberColumn(
-                    "ATR (14d)",
-                    format="R$ %.2f",
-                    help="Volatilidade média dos últimos 14 dias. Base para cálculo de stops e alvos.",
+                "ATR %": st.column_config.NumberColumn(
+                    "Volatilidade %",
+                    format="%.1f%%",
+                    help="Oscilação diária média. <2% = estável, 2-5% = moderado, >5% = volátil.",
                     disabled=True
                 ),
                 "RSI (Termômetro)": st.column_config.TextColumn("RSI (Termômetro)", disabled=True),
