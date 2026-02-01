@@ -1537,7 +1537,7 @@ if US_STOCKS:
         
         if has_quantities:
             display_columns = ["Recomendação", "Ticker", "Qtd", "Preço Entrada", "Preço Atual", "Realizado ($)", "Realizado (%)", 
-                             "Valor Posição", "Volatilidade (ATR) %", "RSI (Termômetro)", 
+                             "Valor Posição", "Projeção Alvo ($)", "Projeção Stop ($)", "Volatilidade (ATR) %", "RSI (Termômetro)", 
                              "Stop Loss", "Alvo (Gain)", "Potencial", "Risco (%)", 
                              "Tendência", "ATR Mult. ⚙️"]
         else:
@@ -1585,6 +1585,18 @@ if US_STOCKS:
                     "Valor Posição",
                     format="$%.0f",
                     help="📈 Valor total que você tem investido HOJE neste ativo. Cálculo: Preço Atual × Quantidade",
+                    disabled=True
+                ),
+                "Projeção Alvo ($)": st.column_config.NumberColumn(
+                    "💰 Ganho se Alvo",
+                    format="$%.0f",
+                    help="💰 Lucro em dólares se atingir o alvo. Cálculo: (Preço Alvo - Preço Atual) × Quantidade",
+                    disabled=True
+                ),
+                "Projeção Stop ($)": st.column_config.NumberColumn(
+                    "🛑 Perda se Stop",
+                    format="$%.0f",
+                    help="🛑 Perda em dólares se acionar o stop. Cálculo: (Preço Atual - Stop Loss) × Quantidade",
                     disabled=True
                 ),
                 "ATR %": st.column_config.NumberColumn(
@@ -1938,13 +1950,6 @@ if ASSET_QUANTITIES:
                     label="📈 Risco/Retorno",
                     value=f"{risk_reward_ratio:.2f}:1",
                     help="Quanto você pode ganhar para cada $1 de risco"
-                )
-            
-            with col4:
-                st.metric(
-                    label="📈 Relação Risco/Retorno",
-                    value=f"{risk_reward_ratio:.2f}:1",
-                    help="Quanto você pode ganhar para cada R$1 de risco"
                 )
             
             st.info("💡 **Dica:** Uma relação risco/retorno > 2:1 é considerada boa para swing trading.")
