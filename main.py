@@ -575,10 +575,16 @@ def get_market_data(tickers, multiplier, individual_multipliers=None):
             gain_target = last_close + (last_atr * 2.0)
             
             # Potencial de Ganho até o alvo
-            gain_potential = ((gain_target - last_close) / last_close) * 100
+            gain_potential_value = ((gain_target - last_close) / last_close) * 100
             
             # Tendência baseada na SMA
             tendencia = "🟢 Alta" if last_close > last_sma else "🔴 Baixa"
+            
+            # Aviso visual de contra-tendência (padrão do mercado)
+            if last_close < last_sma:  # Tendência de baixa
+                gain_potential_display = f"{gain_potential_value:.1f}% ⚠️"
+            else:
+                gain_potential_display = f"{gain_potential_value:.1f}%"
             
             # ================================================================
             # ADICIONA AO RESULTADO
@@ -587,10 +593,11 @@ def get_market_data(tickers, multiplier, individual_multipliers=None):
             data_list.append({
                 "Ticker": ticker_clean,
                 "Preço Atual": last_close,
+                "ATR (14d)": last_atr,  # Volatilidade calculada
                 "RSI (Termômetro)": rsi_status,
                 "Stop Loss Sugerido": stop_price,
                 "Alvo (Gain)": gain_target,
-                "Potencial (%)": gain_potential,
+                "Potencial": gain_potential_display,  # Com aviso visual
                 "Distância Stop (%)": ((last_close - stop_price) / last_close) * 100,
                 "ATR Mult.": current_multiplier,
                 "Tendência": tendencia,
@@ -694,7 +701,10 @@ with st.expander("❓ Como interpretar a tabela", expanded=False):
     - Fórmula: `Alvo = Preço Atual + (ATR × 2.0)`
     - Projeta um movimento de alta equivalente a 2 oscilações normais do ativo.
     
-    **📈 Potencial (%):** Ganho percentual esperado se atingir o alvo. Compare com "Risco (%)" para avaliar relação risco/retorno.
+    **📈 Potencial:** Ganho percentual esperado se atingir o alvo.
+    - **Sem aviso:** Alvo alinhado com tendência de alta (ex: `4.5%`)
+    - **Com ⚠️:** Alvo contra tendência de baixa (ex: `6.7% ⚠️`) - Operação mais arriscada, requer reversão
+    - Compare com "Risco (%)" para avaliar relação risco/retorno.
     
     **⚠️ Risco (%):** Distância percentual até o stop loss (quanto pode cair antes de acionar a venda).
     
@@ -717,13 +727,19 @@ if US_STOCKS:
     if not df_us.empty:
         # Configura colunas editáveis
         edited_df_us = st.data_editor(
-            df_us[["Ticker", "Preço Atual", "RSI (Termômetro)", "Stop Loss Sugerido", "Alvo (Gain)", "Potencial (%)", "Distância Stop (%)", "Tendência", "ATR Mult."]],
+            df_us[["Ticker", "Preço Atual", "ATR (14d)", "RSI (Termômetro)", "Stop Loss Sugerido", "Alvo (Gain)", "Potencial", "Distância Stop (%)", "Tendência", "ATR Mult."]],
             use_container_width=True,
             column_config={
                 "Ticker": st.column_config.TextColumn("Ticker", disabled=True),
                 "Preço Atual": st.column_config.NumberColumn(
                     "Preço Atual",
                     format="$%.1f",
+                    disabled=True
+                ),
+                "ATR (14d)": st.column_config.NumberColumn(
+                    "ATR (14d)",
+                    format="$%.2f",
+                    help="Volatilidade média dos últimos 14 dias. Base para cálculo de stops e alvos.",
                     disabled=True
                 ),
                 "RSI (Termômetro)": st.column_config.TextColumn("RSI (Termômetro)", disabled=True),
@@ -739,10 +755,9 @@ if US_STOCKS:
                     help="Preço alvo de lucro (2.0x ATR acima do preço atual). Meta de venda estratégica.",
                     disabled=True
                 ),
-                "Potencial (%)": st.column_config.NumberColumn(
+                "Potencial": st.column_config.TextColumn(
                     "Potencial 📈",
-                    format="%.1f%%",
-                    help="Ganho percentual se atingir o alvo projetado.",
+                    help="Ganho % se atingir o alvo. ⚠️ = Contra tendência de baixa (operação mais arriscada).",
                     disabled=True
                 ),
                 "Distância Stop (%)": st.column_config.NumberColumn(
@@ -784,13 +799,19 @@ if BR_FIIS:
     if not df_br.empty:
         # Configura colunas editáveis
         edited_df_br = st.data_editor(
-            df_br[["Ticker", "Preço Atual", "RSI (Termômetro)", "Stop Loss Sugerido", "Alvo (Gain)", "Potencial (%)", "Distância Stop (%)", "Tendência", "ATR Mult."]],
+            df_br[["Ticker", "Preço Atual", "ATR (14d)", "RSI (Termômetro)", "Stop Loss Sugerido", "Alvo (Gain)", "Potencial", "Distância Stop (%)", "Tendência", "ATR Mult."]],
             use_container_width=True,
             column_config={
                 "Ticker": st.column_config.TextColumn("Ticker", disabled=True),
                 "Preço Atual": st.column_config.NumberColumn(
                     "Preço Atual",
                     format="R$ %.1f",
+                    disabled=True
+                ),
+                "ATR (14d)": st.column_config.NumberColumn(
+                    "ATR (14d)",
+                    format="R$ %.2f",
+                    help="Volatilidade média dos últimos 14 dias. Base para cálculo de stops e alvos.",
                     disabled=True
                 ),
                 "RSI (Termômetro)": st.column_config.TextColumn("RSI (Termômetro)", disabled=True),
@@ -806,10 +827,9 @@ if BR_FIIS:
                     help="Preço alvo de lucro (2.0x ATR acima do preço atual). Meta de venda estratégica.",
                     disabled=True
                 ),
-                "Potencial (%)": st.column_config.NumberColumn(
+                "Potencial": st.column_config.TextColumn(
                     "Potencial 📈",
-                    format="%.1f%%",
-                    help="Ganho percentual se atingir o alvo projetado.",
+                    help="Ganho % se atingir o alvo. ⚠️ = Contra tendência de baixa (operação mais arriscada).",
                     disabled=True
                 ),
                 "Distância Stop (%)": st.column_config.NumberColumn(
