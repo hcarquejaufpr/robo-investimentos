@@ -827,7 +827,7 @@ with st.sidebar.expander("📝 Registrar Operação (Compra/Venda)", expanded=Fa
         else:
             st.error("❌ Ticker é obrigatório!")
 
-if st.sidebar.button("💾 Salvar Configurações", type="primary", help="Salva sua carteira pessoal (ativos e parâmetros). Seus dados ficam separados de outros usuários."):
+if st.sidebar.button("💾 Salvar Carteira", type="primary", help="Salva sua carteira pessoal (ativos, quantidades e parâmetros). Recarrega automaticamente a página."):
     try:
         # Processa ações americanas
         new_us_stocks = [line.strip() for line in us_stocks_text.split('\n') if line.strip()]
@@ -909,7 +909,7 @@ if st.sidebar.button("💾 Salvar Configurações", type="primary", help="Salva 
         save_user_portfolio(current_username, user_portfolio)
         
         st.sidebar.success("✅ Sua carteira foi salva!")
-        st.sidebar.info("Clique em 'Atualizar Cotações' para ver os novos dados")
+        st.rerun()  # Recarrega a página para aplicar as novas quantidades
         
     except Exception as e:
         st.sidebar.error(f"❌ Erro ao salvar: {e}")
