@@ -716,7 +716,12 @@ with st.sidebar.expander("📊 Quantidade de Ativos (Opcional)", expanded=False)
         # Prepara DataFrame pré-preenchido com tickers US
         us_data = []
         for ticker in US_STOCKS:
-            qty = ASSET_QUANTITIES.get(ticker, 0)
+            asset_info = ASSET_QUANTITIES.get(ticker, 0)
+            # Novo formato: {"quantidade": X, "preco_entrada": Y} ou formato antigo: número
+            if isinstance(asset_info, dict):
+                qty = asset_info.get("quantidade", 0)
+            else:
+                qty = asset_info if asset_info else 0
             us_data.append({"Ticker": ticker, "Quantidade": qty})
         
         df_us_qty = pd.DataFrame(us_data)
@@ -751,7 +756,12 @@ with st.sidebar.expander("📊 Quantidade de Ativos (Opcional)", expanded=False)
         # Prepara DataFrame pré-preenchido com tickers BR
         br_data = []
         for ticker in BR_FIIS:
-            qty = ASSET_QUANTITIES.get(ticker, 0)
+            asset_info = ASSET_QUANTITIES.get(ticker, 0)
+            # Novo formato: {"quantidade": X, "preco_entrada": Y} ou formato antigo: número
+            if isinstance(asset_info, dict):
+                qty = asset_info.get("quantidade", 0)
+            else:
+                qty = asset_info if asset_info else 0
             br_data.append({"Ticker": ticker, "Quantidade": qty})
         
         df_br_qty = pd.DataFrame(br_data)
@@ -1623,6 +1633,73 @@ if ASSET_QUANTITIES:
                 )
             
             st.info("💡 **Dica:** Uma relação risco/retorno > 2:1 é considerada boa para swing trading.")
+            
+            # Gráfico de Realizado vs Projetado
+            st.markdown("---")
+            st.subheader("📊 Visualização: Realizado vs Projetado")
+            
+            import plotly.graph_objects as go
+            
+            fig = go.Figure()
+            
+            # Barra 1: Valor da Posição (base)
+            fig.add_trace(go.Bar(
+                name='Valor Posição',
+                x=['Carteira'],
+                y=[total_invested],
+                marker_color='lightblue',
+                text=[f"${total_invested:,.0f}" if US_STOCKS else f"R$ {total_invested:,.0f}"],
+                textposition='inside'
+            ))
+            
+            # Barra 2: Realizado (verde se positivo, vermelho se negativo)
+            fig.add_trace(go.Bar(
+                name='Realizado',
+                x=['Carteira'],
+                y=[total_realizado],
+                marker_color='green' if total_realizado >= 0 else 'red',
+                text=[f"${total_realizado:,.2f}" if US_STOCKS else f"R$ {total_realizado:,.2f}"],
+                textposition='inside'
+            ))
+            
+            # Barra 3: Projeção Alvo (verde claro)
+            fig.add_trace(go.Bar(
+                name='Projeção Alvo',
+                x=['Carteira'],
+                y=[total_gain_if_target],
+                marker_color='lightgreen',
+                text=[f"${total_gain_if_target:,.0f}" if US_STOCKS else f"R$ {total_gain_if_target:,.0f}"],
+                textposition='inside'
+            ))
+            
+            # Barra 4: Projeção Stop (vermelho claro)
+            fig.add_trace(go.Bar(
+                name='Projeção Stop',
+                x=['Carteira'],
+                y=[total_loss_if_stop],
+                marker_color='lightcoral',
+                text=[f"${total_loss_if_stop:,.0f}" if US_STOCKS else f"R$ {total_loss_if_stop:,.0f}"],
+                textposition='inside'
+            ))
+            
+            fig.update_layout(
+                title='Comparação: Realizado vs Projeções Futuras',
+                xaxis_title='',
+                yaxis_title='Valor ($)' if US_STOCKS else 'Valor (R$)',
+                barmode='group',
+                height=400,
+                showlegend=True
+            )
+            
+            st.plotly_chart(fig, use_container_width=True)
+            
+            st.caption("""
+            **Legenda:**
+            - 🔵 **Valor Posição**: Quanto você tem investido HOJE
+            - 💰 **Realizado**: Quanto você ganhou/perdeu desde que cadastrou
+            - 🎯 **Projeção Alvo**: Quanto você PODE ganhar se atingir os alvos
+            - 🛑 **Projeção Stop**: Quanto você PODE perder se acionar os stops
+            """)
             
             # Salva snapshot da carteira para o gráfico de evolução
             today = datetime.now().strftime("%Y-%m-%d")
