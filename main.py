@@ -2038,6 +2038,27 @@ if ASSET_QUANTITIES:
                 PORTFOLIO_SNAPSHOTS.append(new_snapshot)
                 user_portfolio["PORTFOLIO_SNAPSHOTS"] = PORTFOLIO_SNAPSHOTS
                 save_user_portfolio(current_username, user_portfolio)
+        else:
+            # Nenhum ativo com quantidade cadastrada
+            st.warning("""
+            ### 📊 Cadastre quantidades para ver o Dashboard Completo!
+            
+            Para visualizar:
+            - **💰 Valor Total da Posição**
+            - **🎯 Projeção de Ganhos** (se atingir alvos)
+            - **🛑 Projeção de Perdas** (se acionar stops)
+            - **📊 Gráfico Consolidado da Carteira**
+            - **📈 Evolução Histórica**
+            
+            **Como fazer:**
+            1. Vá na barra lateral ➡️ **"📊 Quantidade de Ativos"**
+            2. Abra a aba do mercado (🇺🇸 EUA ou 🇧🇷 Brasil)
+            3. Digite as quantidades que você possui
+            4. Clique em **"💾 Salvar Configurações"** no final da barra lateral
+            5. Clique em **"🔄 Atualizar Cotações"** para ver o dashboard!
+            
+            💡 **Dica:** Você também pode registrar o preço de entrada em **"📝 Registrar Operação"** para acompanhar seus ganhos/perdas reais.
+            """)
 
 # --- Histórico de Operações ---
 if OPERATIONS_HISTORY:
