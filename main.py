@@ -721,6 +721,10 @@ with st.sidebar.expander("📊 Quantidade de Ativos (Opcional)", expanded=False)
         
         df_us_qty = pd.DataFrame(us_data)
         
+        # DEBUG
+        st.write("🐛 DEBUG - DataFrame US antes do editor:")
+        st.dataframe(df_us_qty)
+        
         # Data editor com Ticker bloqueado
         edited_us = st.data_editor(
             df_us_qty,
@@ -742,6 +746,11 @@ with st.sidebar.expander("📊 Quantidade de Ativos (Opcional)", expanded=False)
             use_container_width=True,
             key="qty_us_editor"
         )
+        
+        # DEBUG - Mostra o que está no session_state
+        if "qty_us_editor" in st.session_state:
+            st.write("🐛 DEBUG - Session State após edição:")
+            st.dataframe(st.session_state.qty_us_editor)
     
     # --- 🇧🇷 Quantidades Brasil ---
     with st.expander("🇧🇷 Quantidades Brasil", expanded=True):
@@ -880,26 +889,45 @@ if st.sidebar.button("💾 Salvar Carteira", type="primary", help="Salva sua car
         # Processa quantidades de ativos - NOVA LÓGICA COM DATA_EDITOR
         new_asset_quantities = {}
         
+        # DEBUG - Verifica o que existe no session_state
+        st.sidebar.write("🐛 DEBUG - Keys no session_state:")
+        st.sidebar.write([k for k in st.session_state.keys() if 'qty' in k.lower()])
+        
         # Combina quantidades de US e BR dos data_editors
         if "qty_us_editor" in st.session_state and st.session_state.qty_us_editor is not None:
+            st.sidebar.write("🐛 DEBUG - Processando qty_us_editor:")
+            st.sidebar.dataframe(st.session_state.qty_us_editor)
             try:
                 for _, row in st.session_state.qty_us_editor.iterrows():
                     ticker = row["Ticker"]
                     qty = row["Quantidade"]
+                    st.sidebar.write(f"  - {ticker}: {qty} (tipo: {type(qty)})")
                     if pd.notna(qty) and qty > 0:
                         new_asset_quantities[ticker] = float(qty)
+                        st.sidebar.success(f"  ✅ {ticker} adicionado: {float(qty)}")
             except (KeyError, AttributeError, ValueError) as e:
                 st.sidebar.warning(f"⚠️ Erro ao processar quantidades US: {e}")
+        else:
+            st.sidebar.error("❌ qty_us_editor NÃO encontrado no session_state")
         
         if "qty_br_editor" in st.session_state and st.session_state.qty_br_editor is not None:
+            st.sidebar.write("🐛 DEBUG - Processando qty_br_editor:")
+            st.sidebar.dataframe(st.session_state.qty_br_editor)
             try:
                 for _, row in st.session_state.qty_br_editor.iterrows():
                     ticker = row["Ticker"]
                     qty = row["Quantidade"]
+                    st.sidebar.write(f"  - {ticker}: {qty} (tipo: {type(qty)})")
                     if pd.notna(qty) and qty > 0:
                         new_asset_quantities[ticker] = float(qty)
+                        st.sidebar.success(f"  ✅ {ticker} adicionado: {float(qty)}")
             except (KeyError, AttributeError, ValueError) as e:
                 st.sidebar.warning(f"⚠️ Erro ao processar quantidades BR: {e}")
+        else:
+            st.sidebar.error("❌ qty_br_editor NÃO encontrado no session_state")
+        
+        st.sidebar.write(f"🐛 DEBUG - Total de quantidades processadas: {len(new_asset_quantities)}")
+        st.sidebar.write(f"🐛 DEBUG - Dicionário final: {new_asset_quantities}")
         
         # Cria o objeto de carteira do usuário
         user_portfolio = {
