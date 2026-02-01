@@ -884,16 +884,41 @@ if st.sidebar.button("💾 Salvar Carteira", type="primary", help="Salva sua car
                 pass  # Tabela ainda não foi renderizada ou não tem ATR Mult.
         
         # Processa quantidades de ativos - NOVA LÓGICA COM DATA_EDITOR
+        # Estrutura: {"AAPL": {"quantidade": 1.5, "preco_entrada": 259.5, "data_entrada": "2026-02-01"}}
         new_asset_quantities = {}
         
+        # Carrega quantidades antigas para preservar preços de entrada
+        old_asset_quantities = user_portfolio.get("ASSET_QUANTITIES", {})
+        
         # Combina quantidades de US e BR dos data_editors
+        tickers_para_buscar_preco = []
+        
         if "qty_us_df" in st.session_state and st.session_state.qty_us_df is not None:
             try:
                 for _, row in st.session_state.qty_us_df.iterrows():
                     ticker = row["Ticker"]
                     qty = row["Quantidade"]
                     if pd.notna(qty) and qty > 0:
-                        new_asset_quantities[ticker] = float(qty)
+                        # Se já existe, preserva o preço de entrada
+                        if ticker in old_asset_quantities and isinstance(old_asset_quantities[ticker], dict):
+                            new_asset_quantities[ticker] = old_asset_quantities[ticker].copy()
+                            new_asset_quantities[ticker]["quantidade"] = float(qty)
+                        elif ticker in old_asset_quantities:
+                            # Migração: formato antigo (só número) para novo formato
+                            new_asset_quantities[ticker] = {
+                                "quantidade": float(qty),
+                                "preco_entrada": None,  # Será preenchido
+                                "data_entrada": datetime.now().strftime("%Y-%m-%d")
+                            }
+                            tickers_para_buscar_preco.append(ticker)
+                        else:
+                            # Novo ticker: precisa buscar preço atual
+                            new_asset_quantities[ticker] = {
+                                "quantidade": float(qty),
+                                "preco_entrada": None,  # Será preenchido
+                                "data_entrada": datetime.now().strftime("%Y-%m-%d")
+                            }
+                            tickers_para_buscar_preco.append(ticker)
             except (KeyError, AttributeError, ValueError) as e:
                 st.sidebar.warning(f"⚠️ Erro ao processar quantidades US: {e}")
         
@@ -903,9 +928,41 @@ if st.sidebar.button("💾 Salvar Carteira", type="primary", help="Salva sua car
                     ticker = row["Ticker"]
                     qty = row["Quantidade"]
                     if pd.notna(qty) and qty > 0:
-                        new_asset_quantities[ticker] = float(qty)
+                        # Mesma lógica para BR
+                        if ticker in old_asset_quantities and isinstance(old_asset_quantities[ticker], dict):
+                            new_asset_quantities[ticker] = old_asset_quantities[ticker].copy()
+                            new_asset_quantities[ticker]["quantidade"] = float(qty)
+                        elif ticker in old_asset_quantities:
+                            new_asset_quantities[ticker] = {
+                                "quantidade": float(qty),
+                                "preco_entrada": None,
+                                "data_entrada": datetime.now().strftime("%Y-%m-%d")
+                            }
+                            tickers_para_buscar_preco.append(ticker)
+                        else:
+                            new_asset_quantities[ticker] = {
+                                "quantidade": float(qty),
+                                "preco_entrada": None,
+                                "data_entrada": datetime.now().strftime("%Y-%m-%d")
+                            }
+                            tickers_para_buscar_preco.append(ticker)
             except (KeyError, AttributeError, ValueError) as e:
                 st.sidebar.warning(f"⚠️ Erro ao processar quantidades BR: {e}")
+        
+        # Busca preços atuais para novos tickers
+        if tickers_para_buscar_preco:
+            st.sidebar.info(f"📊 Capturando preços de entrada para {len(tickers_para_buscar_preco)} ativo(s)...")
+            for ticker in tickers_para_buscar_preco:
+                try:
+                    stock = yf.Ticker(ticker)
+                    hist = stock.history(period="1d")
+                    if not hist.empty:
+                        preco_atual = hist['Close'].iloc[-1]
+                        new_asset_quantities[ticker]["preco_entrada"] = float(preco_atual)
+                        st.sidebar.success(f"✅ {ticker}: R${preco_atual:.2f}")
+                except Exception as e:
+                    st.sidebar.error(f"❌ Erro ao buscar preço de {ticker}: {e}")
+                    new_asset_quantities[ticker]["preco_entrada"] = 0.0
         
         # Cria o objeto de carteira do usuário
         user_portfolio = {
@@ -1079,16 +1136,36 @@ def get_market_data(tickers, multiplier, individual_multipliers=None, asset_quan
             # CÁLCULOS FINANCEIROS (se quantidade informada)
             # ================================================================
             
-            quantity = asset_quantities.get(ticker_clean, 0)
+            # Suporta formato antigo (número) e novo (dicionário)
+            asset_info = asset_quantities.get(ticker_clean, 0)
+            
+            if isinstance(asset_info, dict):
+                quantity = asset_info.get("quantidade", 0)
+                preco_entrada = asset_info.get("preco_entrada", 0)
+            else:
+                # Formato antigo: apenas número
+                quantity = asset_info if asset_info else 0
+                preco_entrada = 0
             
             if quantity > 0:
                 position_value = last_close * quantity
                 gain_if_target = (gain_target - last_close) * quantity
                 loss_if_stop = (last_close - stop_price) * quantity
+                
+                # GANHO/PERDA REAL (desde a entrada)
+                if preco_entrada and preco_entrada > 0:
+                    resultado_real = (last_close - preco_entrada) * quantity
+                    resultado_percentual = ((last_close - preco_entrada) / preco_entrada) * 100
+                else:
+                    resultado_real = 0
+                    resultado_percentual = 0
             else:
                 position_value = 0
                 gain_if_target = 0
                 loss_if_stop = 0
+                resultado_real = 0
+                resultado_percentual = 0
+                preco_entrada = 0
             
             # ================================================================
             # ADICIONA AO RESULTADO
@@ -1097,19 +1174,22 @@ def get_market_data(tickers, multiplier, individual_multipliers=None, asset_quan
             data_list.append({
                 "Ticker": ticker_clean,
                 "Qtd": quantity if quantity > 0 else "-",
-                "Valor Posição": position_value if quantity > 0 else "-",
+                "Preço Entrada": preco_entrada if preco_entrada > 0 else "-",
                 "Preço Atual": last_close,
-                "ATR %": atr_percent,  # Volatilidade percentual
+                "Resultado": resultado_real if quantity > 0 else "-",
+                "Resultado (%)": resultado_percentual if quantity > 0 else "-",
+                "Valor Posição": position_value if quantity > 0 else "-",
+                "ATR %": atr_percent,
                 "RSI (Termômetro)": rsi_status,
-                "Stop Loss Sugerido": stop_price,
+                "Stop Loss": stop_price,
                 "Alvo (Gain)": gain_target,
-                "Potencial": gain_potential_display,  # Com aviso visual
                 "Ganho se Alvo": gain_if_target if quantity > 0 else "-",
                 "Perda se Stop": loss_if_stop if quantity > 0 else "-",
-                "Distância Stop (%)": ((last_close - stop_price) / last_close) * 100,
-                "ATR Mult. ⚙️": mult_display,  # Mostra origem do multiplicador (Auto/Manual/Slider)
+                "Potencial": gain_potential_display,
+                "Risco (%)": ((last_close - stop_price) / last_close) * 100,
+                "ATR Mult. ⚙️": mult_display,
                 "Tendência": tendencia,
-                "Histórico": df['Close'], # Salva para o gráfico
+                "Histórico": df['Close'],
                 # DEBUG INFO
                 "_RSI_Valor": last_rsi,
                 "_ATR_Absoluto": last_atr,
@@ -1245,12 +1325,13 @@ if US_STOCKS:
         has_quantities = any(df_us["Qtd"] != "-")
         
         if has_quantities:
-            display_columns = ["Ticker", "Qtd", "Valor Posição", "Preço Atual", "ATR %", "RSI (Termômetro)", 
-                             "Stop Loss Sugerido", "Alvo (Gain)", "Ganho se Alvo", "Perda se Stop", 
-                             "Potencial", "Tendência", "ATR Mult. ⚙️"]
+            display_columns = ["Ticker", "Qtd", "Preço Entrada", "Preço Atual", "Resultado", "Resultado (%)", 
+                             "Valor Posição", "ATR %", "RSI (Termômetro)", 
+                             "Stop Loss", "Alvo (Gain)", "Ganho se Alvo", "Perda se Stop", 
+                             "Potencial", "Risco (%)", "Tendência", "ATR Mult. ⚙️"]
         else:
             display_columns = ["Ticker", "Preço Atual", "ATR %", "RSI (Termômetro)", 
-                             "Stop Loss Sugerido", "Alvo (Gain)", "Potencial", "Distância Stop (%)", 
+                             "Stop Loss", "Alvo (Gain)", "Potencial", "Risco (%)", 
                              "Tendência", "ATR Mult. ⚙️"]
         
         # Configura colunas editáveis
