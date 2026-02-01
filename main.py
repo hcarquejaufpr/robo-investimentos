@@ -7,9 +7,131 @@ import ssl
 import hashlib
 import config  # Importa suas configurações do config.py
 import plotly.graph_objects as go
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 # Desabilita verificação SSL (necessário em algumas redes corporativas)
 ssl._create_default_https_context = ssl._create_unverified_context
+
+# --- Funções de Notificação por Email ---
+def enviar_email_alerta(destinatario, assunto, conteudo_html):
+    """
+    Envia email usando Gmail SMTP
+    Credenciais carregadas de st.secrets
+    """
+    try:
+        # Carrega credenciais do Streamlit secrets
+        sender_email = st.secrets.get("EMAIL_SENDER", "casamentojuliaehenrique2017@gmail.com")
+        sender_password = st.secrets.get("EMAIL_PASSWORD", "")
+        
+        if not sender_password:
+            return False, "❌ Configure EMAIL_PASSWORD no secrets.toml"
+        
+        # Cria mensagem
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = assunto
+        msg['From'] = sender_email
+        msg['To'] = destinatario
+        
+        # Anexa conteúdo HTML
+        html_part = MIMEText(conteudo_html, 'html')
+        msg.attach(html_part)
+        
+        # Conecta ao servidor Gmail
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()
+        server.login(sender_email, sender_password)
+        
+        # Envia email
+        server.send_message(msg)
+        server.quit()
+        
+        return True, "✅ Email enviado com sucesso!"
+    
+    except Exception as e:
+        return False, f"❌ Erro ao enviar email: {str(e)}"
+
+def gerar_relatorio_html(usuario, alertas_criticos, resumo_carteira):
+    """
+    Gera HTML formatado para o email de notificação
+    """
+    data_atual = datetime.now().strftime("%d/%m/%Y %H:%M")
+    
+    html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <style>
+            body {{ font-family: Arial, sans-serif; line-height: 1.6; background-color: #f4f4f4; margin: 0; padding: 0; }}
+            .container {{ max-width: 600px; margin: 20px auto; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 0 20px rgba(0,0,0,0.1); }}
+            .header {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; }}
+            .header h1 {{ margin: 0; font-size: 28px; }}
+            .header p {{ margin: 10px 0 0 0; opacity: 0.9; }}
+            .content {{ padding: 30px; }}
+            .alert {{ background: #fff3cd; border-left: 4px solid #ff9800; padding: 15px; margin: 15px 0; border-radius: 4px; }}
+            .critical {{ background: #f8d7da; border-left: 4px solid #dc3545; }}
+            .success {{ background: #d4edda; border-left: 4px solid #28a745; padding: 15px; margin: 15px 0; border-radius: 4px; }}
+            .metrics {{ display: flex; justify-content: space-around; margin: 20px 0; }}
+            .metric {{ text-align: center; padding: 15px; background: #f8f9fa; border-radius: 8px; flex: 1; margin: 0 5px; }}
+            .metric-label {{ font-size: 12px; color: #666; text-transform: uppercase; margin-bottom: 5px; }}
+            .metric-value {{ font-size: 24px; font-weight: bold; color: #333; }}
+            .metric-delta {{ font-size: 14px; margin-top: 5px; }}
+            .green {{ color: #28a745; }}
+            .red {{ color: #dc3545; }}
+            .footer {{ background: #f8f9fa; padding: 20px; text-align: center; color: #666; font-size: 14px; }}
+            .button {{ display: inline-block; padding: 12px 30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 5px; margin: 10px 0; }}
+            ul {{ padding-left: 20px; }}
+            ul li {{ margin: 8px 0; }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>🤖 Robô de Investimentos</h1>
+                <p>Relatório Diário - {data_atual}</p>
+            </div>
+            
+            <div class="content">
+                <h2 style="color: #333;">👤 Olá, {usuario}!</h2>
+                
+                {'<div class="alert critical"><h3 style="margin-top:0;">⚠️ ALERTAS CRÍTICOS</h3><ul>' + ''.join([f'<li>{a}</li>' for a in alertas_criticos]) + '</ul></div>' if alertas_criticos else '<div class="success"><strong>✅ Sem Alertas</strong><p style="margin: 5px 0 0 0;">Todos os ativos estão dentro dos parâmetros normais.</p></div>'}
+                
+                <h3 style="color: #333; margin-top: 30px;">📊 Resumo da Carteira</h3>
+                <div class="metrics">
+                    <div class="metric">
+                        <div class="metric-label">Valor Total</div>
+                        <div class="metric-value">${resumo_carteira['total']:,.2f}</div>
+                    </div>
+                </div>
+                <div class="metrics">
+                    <div class="metric">
+                        <div class="metric-label">Potencial de Ganho</div>
+                        <div class="metric-value green">+${resumo_carteira['ganho']:,.2f}</div>
+                        <div class="metric-delta green">Se atingir todos os alvos</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Risco de Perda</div>
+                        <div class="metric-value red">-${resumo_carteira['perda']:,.2f}</div>
+                        <div class="metric-delta red">Se acionar todos os stops</div>
+                    </div>
+                </div>
+                
+                <div style="text-align: center; margin-top: 30px;">
+                    <a href="https://robo-investimentos.streamlit.app" class="button">📱 Acessar Painel Completo</a>
+                </div>
+            </div>
+            
+            <div class="footer">
+                <p>Este é um email automático do seu Robô de Investimentos.</p>
+                <p style="margin: 5px 0;">🤖 Sistema de Estratégia de Saída 2026</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    return html
 
 # --- Configuração da Página ---
 st.set_page_config(
@@ -381,16 +503,77 @@ with st.sidebar.expander("📧 Notificações Diárias", expanded=False):
         """)
     
     if st.button("🧪 Testar Notificação Agora", disabled=not enable_notifications, use_container_width=True):
-        st.warning("""
-        🚧 **Funcionalidade em desenvolvimento**
-        
-        Para implementar notificações reais, você precisará:
-        1. Configurar servidor SMTP (Gmail, SendGrid, etc.)
-        2. Para WhatsApp: API Twilio ou similar
-        3. Adicionar credenciais em secrets.toml
-        
-        Exemplo de implementação disponível em: [docs/notifications.md](https://github.com/hcarquejaufpr/robo-investimentos)
-        """)
+        if not notification_email:
+            st.error("❌ Configure um email para receber as notificações!")
+        else:
+            with st.spinner("Enviando email de teste..."):
+                # Coleta dados para o email
+                alertas_teste = []
+                resumo_teste = {'total': 0, 'ganho': 0, 'perda': 0}
+                
+                try:
+                    # Verifica alertas reais
+                    if US_STOCKS:
+                        df_us = get_market_data(US_STOCKS, PARAMETROS.get("MULTIPLIER_US", 1.2), 
+                                              individual_multipliers=INDIVIDUAL_MULTIPLIERS, 
+                                              asset_quantities=ASSET_QUANTITIES)
+                        if not df_us.empty:
+                            near_stop = df_us[df_us["Distância Stop (%)"] < 5.0]
+                            if not near_stop.empty:
+                                for _, row in near_stop.iterrows():
+                                    alertas_teste.append(f"🛑 {row['Ticker']} está a {row['Distância Stop (%)']:.1f}% do stop loss")
+                    
+                    if BR_FIIS:
+                        df_br = get_market_data(BR_FIIS, PARAMETROS.get("MULTIPLIER_BR", 1.0), 
+                                              individual_multipliers=INDIVIDUAL_MULTIPLIERS, 
+                                              asset_quantities=ASSET_QUANTITIES)
+                        if not df_br.empty:
+                            near_stop = df_br[df_br["Distância Stop (%)"] < 5.0]
+                            if not near_stop.empty:
+                                for _, row in near_stop.iterrows():
+                                    alertas_teste.append(f"🛑 {row['Ticker']} está a {row['Distância Stop (%)']:.1f}% do stop loss")
+                    
+                    # Calcula resumo real da carteira
+                    if PORTFOLIO_SNAPSHOTS:
+                        ultimo_snapshot = PORTFOLIO_SNAPSHOTS[-1]
+                        resumo_teste = {
+                            'total': ultimo_snapshot.get('valor_total', 0),
+                            'ganho': ultimo_snapshot.get('ganho_potencial', 0),
+                            'perda': ultimo_snapshot.get('perda_potencial', 0)
+                        }
+                except:
+                    # Se houver erro, usa dados de exemplo
+                    alertas_teste = ["📊 Sistema de monitoramento ativo"]
+                    resumo_teste = {'total': 10000, 'ganho': 500, 'perda': 300}
+                
+                # Gera HTML e envia
+                html = gerar_relatorio_html(
+                    st.session_state.get('user_name', 'Usuário'),
+                    alertas_teste,
+                    resumo_teste
+                )
+                
+                sucesso, mensagem = enviar_email_alerta(
+                    notification_email,
+                    "🤖 Robô de Investimentos - Teste de Notificação",
+                    html
+                )
+                
+                if sucesso:
+                    st.success(mensagem + f" Verifique sua caixa de entrada: {notification_email}")
+                else:
+                    st.error(mensagem)
+                    if "EMAIL_PASSWORD" in mensagem:
+                        st.info("""
+                        📝 **Como configurar:**
+                        
+                        1. Vá em: https://myaccount.google.com/apppasswords
+                        2. Crie uma senha de app para "E-mail"
+                        3. No Streamlit Cloud: Settings → Secrets → Adicione:
+                        ```
+                        EMAIL_PASSWORD = "sua senha de 16 caracteres"
+                        ```
+                        """)
 
 # Mostra hora da última atualização
 st.sidebar.caption(f"🕒 Atualizado: {datetime.now().strftime('%H:%M:%S')}")
