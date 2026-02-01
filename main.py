@@ -1098,7 +1098,7 @@ def get_market_data(tickers, multiplier, individual_multipliers=None, asset_quan
                 continue
                 
             # ================================================================
-            # CÁLCULOS TÉCNICOS: ATR, SMA e RSI
+            # CÁLCULOS TÉCNICOS: ATR, Médias Móveis e RSI
             # ================================================================
             
             # 1. ATR (Average True Range) - Volatilidade
@@ -1108,8 +1108,10 @@ def get_market_data(tickers, multiplier, individual_multipliers=None, asset_quan
             df['TR'] = df[['High-Low', 'High-PrevClose', 'Low-PrevClose']].max(axis=1)
             df['ATR'] = df['TR'].rolling(window=14).mean()
             
-            # 2. SMA (Simple Moving Average) - Tendência
-            df['SMA_20'] = df['Close'].rolling(window=20).mean()
+            # 2. Médias Móveis - Análise de Tendência Robusta
+            df['SMA_20'] = df['Close'].rolling(window=20).mean()  # Curto prazo
+            df['SMA_50'] = df['Close'].rolling(window=50).mean()  # Médio prazo
+            df['SMA_200'] = df['Close'].rolling(window=200).mean()  # Longo prazo
             
             # 3. RSI (Relative Strength Index) - Força Relativa
             delta = df['Close'].diff()
@@ -1117,6 +1119,12 @@ def get_market_data(tickers, multiplier, individual_multipliers=None, asset_quan
             loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
             rs = gain / loss
             df['RSI'] = 100 - (100 / (1 + rs))
+            
+            # 4. MACD (Moving Average Convergence Divergence) - Momentum
+            ema_12 = df['Close'].ewm(span=12, adjust=False).mean()
+            ema_26 = df['Close'].ewm(span=26, adjust=False).mean()
+            df['MACD'] = ema_12 - ema_26
+            df['MACD_Signal'] = df['MACD'].ewm(span=9, adjust=False).mean()
             
             # Verifica se há dados suficientes
             if pd.isna(df['ATR'].iloc[-1]) or pd.isna(df['SMA_20'].iloc[-1]) or pd.isna(df['RSI'].iloc[-1]):
@@ -1130,8 +1138,53 @@ def get_market_data(tickers, multiplier, individual_multipliers=None, asset_quan
             
             last_close = float(df['Close'].iloc[-1])
             last_atr = float(df['ATR'].iloc[-1])
-            last_sma = float(df['SMA_20'].iloc[-1])
+            last_sma_20 = float(df['SMA_20'].iloc[-1])
+            last_sma_50 = float(df['SMA_50'].iloc[-1]) if not pd.isna(df['SMA_50'].iloc[-1]) else last_sma_20
+            last_sma_200 = float(df['SMA_200'].iloc[-1]) if not pd.isna(df['SMA_200'].iloc[-1]) else last_sma_20
             last_rsi = float(df['RSI'].iloc[-1])
+            last_macd = float(df['MACD'].iloc[-1]) if not pd.isna(df['MACD'].iloc[-1]) else 0
+            last_macd_signal = float(df['MACD_Signal'].iloc[-1]) if not pd.isna(df['MACD_Signal'].iloc[-1]) else 0
+            
+            # ================================================================
+            # ANÁLISE AVANÇADA DE TENDÊNCIA - DECISÃO DE VENDA
+            # ================================================================
+            
+            # Análise de múltiplas médias móveis
+            below_sma20 = last_close < last_sma_20
+            below_sma50 = last_close < last_sma_50
+            below_sma200 = last_close < last_sma_200
+            
+            # Death Cross: SMA 50 cruza abaixo da SMA 200 (sinal forte de baixa)
+            death_cross = last_sma_50 < last_sma_200
+            
+            # Momentum negativo (MACD abaixo do sinal)
+            momentum_negativo = last_macd < last_macd_signal
+            
+            # Calcula força da tendência de baixa (0-100)
+            forca_baixa = 0
+            if below_sma20: forca_baixa += 25
+            if below_sma50: forca_baixa += 25
+            if below_sma200: forca_baixa += 20
+            if death_cross: forca_baixa += 15
+            if momentum_negativo: forca_baixa += 15
+            
+            # Classifica a tendência
+            if forca_baixa >= 60:
+                tendencia_status = "🔴 BAIXA FORTE"
+                tendencia_alerta = "⚠️ VENDER URGENTE"
+                prioridade_venda = 1  # Alta prioridade
+            elif forca_baixa >= 40:
+                tendencia_status = "🟠 BAIXA MODERADA"
+                tendencia_alerta = "⚠️ Considerar venda"
+                prioridade_venda = 2  # Média prioridade
+            elif forca_baixa >= 20:
+                tendencia_status = "🟡 NEUTRO/BAIXA"
+                tendencia_alerta = "👁️ Monitorar"
+                prioridade_venda = 3  # Baixa prioridade
+            else:
+                tendencia_status = "🟢 ALTA"
+                tendencia_alerta = ""
+                prioridade_venda = 4  # Sem urgência
             
             # Usa multiplicador individual se existir (PRIORIDADE: ajuste manual prevalece sobre sliders)
             ticker_clean = ticker.replace(".SA", "")
@@ -1143,11 +1196,12 @@ def get_market_data(tickers, multiplier, individual_multipliers=None, asset_quan
             # ================================================================
             # O sistema força automaticamente 1.0x ATR em situações de risco:
             # 1. RSI >= 70 (Sobrecompra/Topo)
-            # 2. Tendência de Baixa (Preço < SMA 20)
+            # 2. Tendência de Baixa Forte ou Moderada
+            # 3. Momentum negativo persistente
             
             # Verifica condições de risco
             is_overbought = last_rsi >= 70  # Sobrecompra (possível topo)
-            is_downtrend = last_close < last_sma  # Tendência de baixa
+            is_strong_downtrend = forca_baixa >= 40  # Tendência de baixa significativa
             
             # Define RSI Status
             if last_rsi >= 70:
@@ -1157,16 +1211,16 @@ def get_market_data(tickers, multiplier, individual_multipliers=None, asset_quan
             else:
                 rsi_status = f"Neutro ({last_rsi:.1f})"
             
-            # LÓGICA DE SEGURANÇA: Força 1.0x se houver risco
-            if is_overbought or is_downtrend:
+            # LÓGICA DE SEGURANÇA: Força 1.0x se houver risco significativo
+            if is_overbought or is_strong_downtrend:
                 stop_multiplier = 1.0
                 
                 # Identifica o motivo da proteção automática
                 reasons = []
                 if is_overbought:
                     reasons.append("RSI≥70")
-                if is_downtrend:
-                    reasons.append("Baixa")
+                if is_strong_downtrend:
+                    reasons.append("Baixa Forte")
                 
                 mult_display = f"1.0x 🛡️ ({', '.join(reasons)})"
             else:
@@ -1192,14 +1246,13 @@ def get_market_data(tickers, multiplier, individual_multipliers=None, asset_quan
             # Potencial de Ganho até o alvo
             gain_potential_value = ((gain_target - last_close) / last_close) * 100
             
-            # Tendência baseada na SMA
-            tendencia = "🟢 Alta" if last_close > last_sma else "🔴 Baixa"
-            
-            # Aviso visual de contra-tendência (padrão do mercado)
-            if last_close < last_sma:  # Tendência de baixa
-                gain_potential_display = f"{gain_potential_value:.1f}% ⚠️"
+            # Aviso visual de contra-tendência forte
+            if forca_baixa >= 60:
+                gain_potential_display = f"{gain_potential_value:.1f}% 🚨"  # Contra-tendência forte
+            elif forca_baixa >= 40:
+                gain_potential_display = f"{gain_potential_value:.1f}% ⚠️"  # Contra-tendência moderada
             else:
-                gain_potential_display = f"{gain_potential_value:.1f}%"
+                gain_potential_display = f"{gain_potential_value:.1f}%"  # Sem contra-tendência
             
             # ATR como porcentagem do preço (mais prático para decisões)
             atr_percent = (last_atr / last_close) * 100
@@ -1260,14 +1313,22 @@ def get_market_data(tickers, multiplier, individual_multipliers=None, asset_quan
                 "Potencial": gain_potential_display,
                 "Risco (%)": ((last_close - stop_price) / last_close) * 100,
                 "ATR Mult. ⚙️": mult_display,
-                "Tendência": tendencia,
+                "Tendência": tendencia_status,
+                "Recomendação": tendencia_alerta,
+                "Prioridade": prioridade_venda,
+                "Força Baixa (%)": forca_baixa,
                 "Histórico": df['Close'],
                 # DEBUG INFO
                 "_RSI_Valor": last_rsi,
                 "_ATR_Absoluto": last_atr,
                 "_Mult_Config": current_multiplier,
                 "_Mult_Usado_Stop": stop_multiplier,
-                "_Stop_Calc": f"{last_close:.2f} - ({last_atr:.2f} × {stop_multiplier}) = {stop_price:.2f}"
+                "_Stop_Calc": f"{last_close:.2f} - ({last_atr:.2f} × {stop_multiplier}) = {stop_price:.2f}",
+                "_SMA_20": last_sma_20,
+                "_SMA_50": last_sma_50,
+                "_SMA_200": last_sma_200,
+                "_MACD": last_macd,
+                "_DeathCross": death_cross
             })
             
         except Exception as e:
@@ -1369,6 +1430,77 @@ if US_STOCKS:
     df_us = get_market_data(US_STOCKS, mult_us, individual_multipliers=INDIVIDUAL_MULTIPLIERS, asset_quantities=ASSET_QUANTITIES)
     
     if not df_us.empty:
+        # === PAINEL DE PRIORIDADES DE VENDA ===
+        st.markdown("---")
+        st.markdown("### 🎯 Prioridades de Venda (Análise de Tendência)")
+        
+        # Conta ativos por prioridade
+        vender_urgente = df_us[df_us["Prioridade"] == 1]
+        considerar_venda = df_us[df_us["Prioridade"] == 2]
+        monitorar = df_us[df_us["Prioridade"] == 3]
+        sem_urgencia = df_us[df_us["Prioridade"] == 4]
+        
+        col_prior1, col_prior2, col_prior3, col_prior4 = st.columns(4)
+        
+        with col_prior1:
+            if len(vender_urgente) > 0:
+                st.error(f"""
+                **🚨 VENDER URGENTE**
+                
+                {len(vender_urgente)} ativo(s)
+                
+                {', '.join(vender_urgente['Ticker'].tolist())}
+                
+                Tendência de baixa forte!
+                """)
+            else:
+                st.success("✅ Nenhum com urgência")
+        
+        with col_prior2:
+            if len(considerar_venda) > 0:
+                st.warning(f"""
+                **⚠️ Considerar Venda**
+                
+                {len(considerar_venda)} ativo(s)
+                
+                {', '.join(considerar_venda['Ticker'].tolist())}
+                
+                Tendência de baixa moderada
+                """)
+            else:
+                st.info("✅ Nenhum nesta categoria")
+        
+        with col_prior3:
+            if len(monitorar) > 0:
+                st.info(f"""
+                **👁️ Monitorar**
+                
+                {len(monitorar)} ativo(s)
+                
+                {', '.join(monitorar['Ticker'].tolist())}
+                
+                Sinais mistos
+                """)
+            else:
+                st.info("✅ Nenhum para monitorar")
+        
+        with col_prior4:
+            if len(sem_urgencia) > 0:
+                st.success(f"""
+                **🟢 Sem Urgência**
+                
+                {len(sem_urgencia)} ativo(s)
+                
+                {', '.join(sem_urgencia['Ticker'].tolist())}
+                
+                Tendência de alta
+                """)
+            else:
+                st.info("—")
+        
+        st.markdown("---")
+    
+    if not df_us.empty:
         # DEBUG: Mostra informações técnicas apenas se modo debug ativo
         if DEBUG_MODE:
             st.write("🐛 Colunas disponíveis no DataFrame:", df_us.columns.tolist())
@@ -1400,21 +1532,30 @@ if US_STOCKS:
         # Define quais colunas mostrar (depende se tem quantidades cadastradas)
         has_quantities = any(df_us["Qtd"] != "-")
         
+        # Ordena por prioridade de venda (maior urgência primeiro)
+        df_us_sorted = df_us.sort_values("Prioridade")
+        
         if has_quantities:
-            display_columns = ["Ticker", "Qtd", "Preço Entrada", "Preço Atual", "Realizado ($)", "Realizado (%)", 
+            display_columns = ["Recomendação", "Ticker", "Qtd", "Preço Entrada", "Preço Atual", "Realizado ($)", "Realizado (%)", 
                              "Valor Posição", "Volatilidade (ATR) %", "RSI (Termômetro)", 
                              "Stop Loss", "Alvo (Gain)", "Potencial", "Risco (%)", 
                              "Tendência", "ATR Mult. ⚙️"]
         else:
-            display_columns = ["Ticker", "Preço Atual", "Volatilidade (ATR) %", "RSI (Termômetro)", 
+            display_columns = ["Recomendação", "Ticker", "Preço Atual", "Volatilidade (ATR) %", "RSI (Termômetro)", 
                              "Stop Loss", "Alvo (Gain)", "Potencial", "Risco (%)", 
                              "Tendência", "ATR Mult. ⚙️"]
         
         # Configura colunas editáveis
         edited_df_us = st.data_editor(
-            df_us[display_columns],
+            df_us_sorted[display_columns],
             use_container_width=True,
             column_config={
+                "Recomendação": st.column_config.TextColumn(
+                    "🎯 Ação",
+                    help="Recomendação baseada na análise de tendência: Vender Urgente, Considerar Venda, Monitorar",
+                    disabled=True,
+                    width="medium"
+                ),
                 "Ticker": st.column_config.TextColumn("Ticker", disabled=True),
                 "Qtd": st.column_config.TextColumn("Qtd", disabled=True),
                 "Preço Entrada": st.column_config.NumberColumn(
