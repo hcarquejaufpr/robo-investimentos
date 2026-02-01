@@ -207,20 +207,26 @@ def login_register_page():
             if submit:
                 users = load_users()
                 
-                # Debug temporário
-                st.write(f"🔍 DEBUG - Usuários carregados: {list(users.keys())}")
-                st.write(f"🔍 DEBUG - Username digitado: '{username}'")
-                st.write(f"🔍 DEBUG - Username existe?: {username in users}")
-                if username in users:
-                    st.write(f"🔍 DEBUG - Senha armazenada: '{users[username]['password']}'")
-                    st.write(f"🔍 DEBUG - Senha digitada: '{password}'")
-                    st.write(f"🔍 DEBUG - Senhas iguais?: {users[username]['password'] == password}")
+                # Debug temporário - área expandida para forçar visibilidade
+                with st.expander("🔍 DEBUG - Clique para ver detalhes", expanded=True):
+                    st.info(f"**Usuários no banco:** {list(users.keys())}")
+                    st.info(f"**Username digitado:** '{username}'")
+                    st.info(f"**Usuário existe no banco?** {username in users}")
+                    
+                    if username in users:
+                        st.warning(f"**Senha no banco:** '{users[username]['password']}'")
+                        st.warning(f"**Senha digitada:** '{password}'")
+                        st.warning(f"**Senhas são iguais?** {users[username]['password'] == password}")
+                        st.warning(f"**Email no banco:** '{users[username].get('email', 'SEM EMAIL')}'")
+                    else:
+                        st.error(f"❌ Usuário '{username}' NÃO encontrado no banco!")
                 
                 if username in users and users[username]["password"] == password:
                     st.session_state["authenticated"] = True
                     st.session_state["username"] = username
                     st.session_state["user_name"] = users[username]["name"]
                     st.session_state["user_email"] = users[username].get("email", "")
+                    st.success("✅ Login bem-sucedido! Redirecionando...")
                     st.rerun()
                 else:
                     st.error("❌ Usuário ou senha incorretos!")
