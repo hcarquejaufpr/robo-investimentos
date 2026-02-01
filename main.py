@@ -262,6 +262,9 @@ BR_FIIS = user_portfolio.get("BR_FIIS", [])
 TESOURO_DIRETO = user_portfolio.get("TESOURO_DIRETO", {})
 PARAMETROS = user_portfolio.get("PARAMETROS", {"MULTIPLIER_US": 1.2, "MULTIPLIER_BR": 1.0})
 
+# Multiplicadores individuais por ticker (opcional)
+INDIVIDUAL_MULTIPLIERS = user_portfolio.get("INDIVIDUAL_MULTIPLIERS", {})
+
 # ============================================================================
 # APP PRINCIPAL (só executa se autenticado)
 # ============================================================================
@@ -373,6 +376,39 @@ with st.sidebar.expander("💰 Tesouro Direto", expanded=False):
         O sistema calculará automaticamente a alíquota de IR e recomendará o melhor momento de venda."""
     )
 
+# --- Ajustes Individuais de ATR ---
+st.sidebar.markdown("---")
+st.sidebar.header("⚙️ Ajustes Individuais (Opcional)")
+
+with st.sidebar.expander("🎯 Multiplicador ATR por Ativo", expanded=False):
+    st.markdown("""
+    **Personalize o stop de cada ativo individualmente!**
+    
+    Formato: `TICKER: multiplicador`
+    
+    Exemplos:
+    ```
+    AAPL: 1.5
+    NVDA: 2.0
+    HGLG11: 1.0
+    ```
+    
+    Se não definir, usa o padrão (US ou BR).
+    """)
+    
+    # Converte dicionário em texto editável
+    individual_mult_lines = []
+    for ticker, mult in INDIVIDUAL_MULTIPLIERS.items():
+        individual_mult_lines.append(f"{ticker}: {mult}")
+    
+    individual_mult_text = st.text_area(
+        "Multiplicadores personalizados",
+        value="\n".join(individual_mult_lines),
+        height=150,
+        key="individual_mults",
+        help="Deixe em branco para usar os multiplicadores padrão. Defina apenas os tickers que quer personalizar."
+    )
+
 if st.sidebar.button("💾 Salvar Configurações", type="primary", help="Salva sua carteira pessoal (ativos e parâmetros). Seus dados ficam separados de outros usuários."):
     try:
         # Processa ações americanas
@@ -391,6 +427,20 @@ if st.sidebar.button("💾 Salvar Configurações", type="primary", help="Salva 
                     data = parts[1].strip()
                     new_tesouro[nome] = {'data_compra': data}
         
+        # Processa multiplicadores individuais
+        new_individual_multipliers = {}
+        for line in individual_mult_text.split('\n'):
+            line = line.strip()
+            if ':' in line:
+                try:
+                    ticker, mult = line.split(':', 1)
+                    ticker = ticker.strip().upper()
+                    mult = float(mult.strip())
+                    if mult > 0:  # Valida multiplicador positivo
+                        new_individual_multipliers[ticker] = mult
+                except ValueError:
+                    st.sidebar.warning(f"⚠️ Linha ignorada (formato inválido): {line}")
+        
         # Cria o objeto de carteira do usuário
         user_portfolio = {
             "US_STOCKS": new_us_stocks,
@@ -399,7 +449,8 @@ if st.sidebar.button("💾 Salvar Configurações", type="primary", help="Salva 
             "PARAMETROS": {
                 "MULTIPLIER_US": mult_us,
                 "MULTIPLIER_BR": mult_br
-            }
+            },
+            "INDIVIDUAL_MULTIPLIERS": new_individual_multipliers
         }
         
         # Salva a carteira específica deste usuário
@@ -414,10 +465,13 @@ if st.sidebar.button("💾 Salvar Configurações", type="primary", help="Salva 
 # --- Funções de Cálculo ---
 
 @st.cache_data(ttl=300) # Cache de 5 minutos
-def get_market_data(tickers, multiplier):
+def get_market_data(tickers, multiplier, individual_multipliers=None):
     """Baixa dados, calcula ATR, RSI e define Stop Loss."""
     if not tickers:
         return pd.DataFrame()
+    
+    if individual_multipliers is None:
+        individual_multipliers = {}
     
     data_list = []
     errors = []
@@ -475,8 +529,12 @@ def get_market_data(tickers, multiplier):
             last_sma = float(df['SMA_20'].iloc[-1])
             last_rsi = float(df['RSI'].iloc[-1])
             
+            # Usa multiplicador individual se existir, senão usa o padrão
+            ticker_clean = ticker.replace(".SA", "")
+            current_multiplier = individual_multipliers.get(ticker_clean, multiplier)
+            
             # Preço de Stop (Gatilho de Venda)
-            stop_price = last_close - (last_atr * multiplier)
+            stop_price = last_close - (last_atr * current_multiplier)
             
             # Tendência baseada na SMA
             tendencia = "🟢 Alta" if last_close > last_sma else "🔴 Baixa"
@@ -497,11 +555,12 @@ def get_market_data(tickers, multiplier):
             # ================================================================
             
             data_list.append({
-                "Ticker": ticker.replace(".SA", ""),
+                "Ticker": ticker_clean,
                 "Preço Atual": last_close,
                 "RSI (Termômetro)": rsi_status,
                 "Stop Loss Sugerido": stop_price,
                 "Distância (%)": ((last_close - stop_price) / last_close) * 100,
+                "ATR Mult.": f"{current_multiplier}x",  # Mostra qual multiplicador foi usado
                 "Tendência": tendencia,
                 "Histórico": df['Close'] # Salva para o gráfico
             })
@@ -590,10 +649,10 @@ with col1:
     st.caption("💡 **Dica:** RSI acima de 70 indica sobrecompra (topo), abaixo de 30 indica sobrevenda (fundo)")
     if US_STOCKS:
         st.caption(f"📊 Analisando {len(US_STOCKS)} ticker(s): {', '.join(US_STOCKS)}")
-        df_us = get_market_data(US_STOCKS, mult_us)
+        df_us = get_market_data(US_STOCKS, mult_us, individual_multipliers=INDIVIDUAL_MULTIPLIERS)
         if not df_us.empty:
             st.dataframe(
-                df_us[["Ticker", "Preço Atual", "RSI (Termômetro)", "Stop Loss Sugerido", "Distância (%)", "Tendência"]],
+                df_us[["Ticker", "Preço Atual", "RSI (Termômetro)", "Stop Loss Sugerido", "Distância (%)", "Tendência", "ATR Mult."]],
                 use_container_width=True
             )
         else:
@@ -606,10 +665,10 @@ with col2:
     st.caption("💡 **Dica:** FIIs são menos voláteis. Stops mais próximos (1.0x ATR) são geralmente adequados")
     if BR_FIIS:
         st.caption(f"📊 Analisando {len(BR_FIIS)} ticker(s): {', '.join(BR_FIIS)}")
-        df_br = get_market_data(BR_FIIS, mult_br)
+        df_br = get_market_data(BR_FIIS, mult_br, individual_multipliers=INDIVIDUAL_MULTIPLIERS)
         if not df_br.empty:
             st.dataframe(
-                df_br[["Ticker", "Preço Atual", "RSI (Termômetro)", "Stop Loss Sugerido", "Distância (%)", "Tendência"]],
+                df_br[["Ticker", "Preço Atual", "RSI (Termômetro)", "Stop Loss Sugerido", "Distância (%)", "Tendência", "ATR Mult."]],
                 use_container_width=True
             )
         else:
