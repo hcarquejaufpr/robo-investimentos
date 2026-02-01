@@ -386,6 +386,60 @@ st.markdown("""
 * **Tesouro Direto:** Analisa a tabela regressiva de IR para economizar impostos.
 """)
 
+# --- Indicador de Cotação do Dólar ---
+if US_STOCKS:
+    st.markdown("---")
+    col_dolar1, col_dolar2, col_dolar3 = st.columns([2, 2, 3])
+    
+    try:
+        # Busca cotação do dólar
+        dolar = yf.Ticker("USDBRL=X")
+        dolar_hist = dolar.history(period="5d")
+        
+        if not dolar_hist.empty:
+            preco_atual = dolar_hist['Close'].iloc[-1]
+            preco_anterior = dolar_hist['Close'].iloc[-2] if len(dolar_hist) > 1 else preco_atual
+            variacao = ((preco_atual - preco_anterior) / preco_anterior) * 100
+            
+            # Calcula tendência de 5 dias
+            if len(dolar_hist) >= 5:
+                preco_5d_atras = dolar_hist['Close'].iloc[0]
+                tendencia_5d = ((preco_atual - preco_5d_atras) / preco_5d_atras) * 100
+            else:
+                tendencia_5d = variacao
+            
+            with col_dolar1:
+                st.metric(
+                    label="💵 Dólar (USD/BRL)",
+                    value=f"R$ {preco_atual:.2f}",
+                    delta=f"{variacao:+.2f}%"
+                )
+            
+            with col_dolar2:
+                tendencia_icon = "📉" if tendencia_5d < 0 else "📈"
+                tendencia_text = "Queda" if tendencia_5d < 0 else "Alta"
+                st.metric(
+                    label=f"{tendencia_icon} Tendência 5 dias",
+                    value=tendencia_text,
+                    delta=f"{tendencia_5d:+.2f}%"
+                )
+            
+            with col_dolar3:
+                # Alerta de tendência
+                if tendencia_5d < -2:
+                    st.warning(f"⚠️ **Dólar em queda de {abs(tendencia_5d):.1f}%** - Considere vender ações US em breve!")
+                elif tendencia_5d > 2:
+                    st.success(f"✅ **Dólar em alta de {tendencia_5d:.1f}%** - Momento favorável para manter ações US!")
+                else:
+                    st.info("📊 Dólar estável - Monitore a tendência antes de vender")
+        else:
+            st.caption("⚠️ Não foi possível carregar cotação do dólar")
+    except Exception as e:
+        st.caption(f"⚠️ Erro ao buscar cotação do dólar: {str(e)}")
+    
+    st.markdown("---")
+
+
 # --- Sistema de Alertas ---
 if US_STOCKS or BR_FIIS:
     # Pega dados para análise de alertas
