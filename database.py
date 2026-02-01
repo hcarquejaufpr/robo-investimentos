@@ -41,9 +41,16 @@ def init_database():
                 username TEXT PRIMARY KEY,
                 password TEXT NOT NULL,
                 name TEXT NOT NULL,
+                email TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
+        
+        # Adiciona coluna email se não existir (para bancos existentes)
+        try:
+            cursor.execute('ALTER TABLE users ADD COLUMN email TEXT')
+        except sqlite3.OperationalError:
+            pass  # Coluna já existe
         
         # Tabela de carteiras
         cursor.execute('''
@@ -62,8 +69,8 @@ def init_database():
         cursor.execute('SELECT COUNT(*) FROM users WHERE username = ?', ('admin',))
         if cursor.fetchone()[0] == 0:
             cursor.execute(
-                'INSERT INTO users (username, password, name) VALUES (?, ?, ?)',
-                ('admin', 'investidor2026', 'Administrador')
+                'INSERT INTO users (username, password, name, email) VALUES (?, ?, ?, ?)',
+                ('admin', 'investidor2026', 'Administrador', 'admin@robo-investimentos.com')
             )
         
         conn.commit()
@@ -77,23 +84,24 @@ def load_users():
     """Carrega todos os usuários do banco de dados."""
     with get_db_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute('SELECT username, password, name FROM users')
+        cursor.execute('SELECT username, password, name, email FROM users')
         rows = cursor.fetchall()
         
         users = {}
         for row in rows:
             users[row['username']] = {
                 'password': row['password'],
-                'name': row['name']
+                'name': row['name'],
+                'email': row['email'] if row['email'] else ''
             }
         return users
-
-def save_user(username, password, name):
+, email=''):
     """Salva um novo usuário no banco de dados."""
     with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute(
-            'INSERT INTO users (username, password, name) VALUES (?, ?, ?)',
+            'INSERT INTO users (username, password, name, email) VALUES (?, ?, ?, ?)',
+            (username, password, name, emailame, password, name) VALUES (?, ?, ?)',
             (username, password, name)
         )
         return True

@@ -208,6 +208,7 @@ def login_register_page():
                     st.session_state["authenticated"] = True
                     st.session_state["username"] = username
                     st.session_state["user_name"] = users[username]["name"]
+                    st.session_state["user_email"] = users[username].get("email", "")
                     st.rerun()
                 else:
                     st.error("❌ Usuário ou senha incorretos!")
@@ -219,25 +220,28 @@ def login_register_page():
         with st.form("register_form"):
             new_username = st.text_input("Escolha um usuário", key="reg_username")
             new_name = st.text_input("Seu nome completo", key="reg_name")
+            new_email = st.text_input("Seu email (para receber notificações)", key="reg_email", placeholder="exemplo@email.com")
             new_password = st.text_input("Escolha uma senha", type="password", key="reg_password")
             new_password2 = st.text_input("Confirme a senha", type="password", key="reg_password2")
             register = st.form_submit_button("Cadastrar", type="primary", use_container_width=True)
             
             if register:
                 # Validações
-                if not new_username or not new_name or not new_password:
+                if not new_username or not new_name or not new_password or not new_email:
                     st.error("❌ Preencha todos os campos!")
                 elif new_password != new_password2:
                     st.error("❌ As senhas não coincidem!")
                 elif len(new_password) < 6:
                     st.error("❌ A senha deve ter pelo menos 6 caracteres!")
+                elif "@" not in new_email or "." not in new_email:
+                    st.error("❌ Digite um email válido!")
                 else:
                     # Verifica se usuário já existe no banco
                     if db.user_exists(new_username):
                         st.error("❌ Este usuário já existe!")
                     else:
                         # Cria novo usuário no banco
-                        db.save_user(new_username, new_password, new_name)
+                        db.save_user(new_username, new_password, new_name, new_email)
                         st.success(f"✅ Conta criada com sucesso! Faça login com o usuário: {new_username}")
     
     st.markdown("---")
@@ -437,11 +441,19 @@ with st.sidebar.expander("📧 Notificações Diárias", expanded=False):
     )
     
     if enable_notifications:
+        # Usa o email do usuário logado como padrão
+        user_email = st.session_state.get("user_email", "")
+        default_email = user_email if user_email else user_portfolio.get("NOTIFICATIONS", {}).get("email", "")
+        
         notification_email = st.text_input(
             "Email para alertas:",
-            value=user_portfolio.get("NOTIFICATIONS", {}).get("email", ""),
-            placeholder="seu@email.com"
+            value=default_email,
+            placeholder="seu@email.com",
+            help="📧 Receberá relatórios diários (padrão: email de cadastro)"
         )
+        
+        if user_email and notification_email == user_email:
+            st.caption(f"✅ Usando seu email de cadastro")
         
         notification_time = st.time_input(
             "Horário de envio:",
