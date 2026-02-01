@@ -1344,15 +1344,33 @@ if US_STOCKS:
             column_config={
                 "Ticker": st.column_config.TextColumn("Ticker", disabled=True),
                 "Qtd": st.column_config.TextColumn("Qtd", disabled=True),
-                "Valor Posição": st.column_config.NumberColumn(
-                    "Valor Posição",
-                    format="$%.0f",
-                    help="Valor total investido neste ativo (Quantidade × Preço Atual)",
+                "Preço Entrada": st.column_config.NumberColumn(
+                    "Preço Entrada",
+                    format="$%.2f",
+                    help="Preço quando você cadastrou a quantidade",
                     disabled=True
                 ),
                 "Preço Atual": st.column_config.NumberColumn(
                     "Preço Atual",
-                    format="$%.1f",
+                    format="$%.2f",
+                    disabled=True
+                ),
+                "Realizado ($)": st.column_config.NumberColumn(
+                    "Realizado ($)",
+                    format="$%.2f",
+                    help="Ganho/Perda real desde a entrada",
+                    disabled=True
+                ),
+                "Realizado (%)": st.column_config.NumberColumn(
+                    "Realizado (%)",
+                    format="%.2f%%",
+                    help="Percentual de ganho/perda desde a entrada",
+                    disabled=True
+                ),
+                "Valor Posição": st.column_config.NumberColumn(
+                    "Valor Posição",
+                    format="$%.0f",
+                    help="Valor total investido neste ativo (Quantidade × Preço Atual)",
                     disabled=True
                 ),
                 "ATR %": st.column_config.NumberColumn(
@@ -1518,21 +1536,19 @@ else:
 # --- Resumo Financeiro ---
 if ASSET_QUANTITIES:
     # Verifica se os dataframes existem (se o usuário clicou em Atualizar Cotações)
-    if ('df_us' not in locals() or df_us.empty) and ('df_br' not in locals() or df_br.empty):
-        st.markdown("---")
-        st.info("💡 **Clique em '🔄 Atualizar Cotações' para ver o resumo da carteira e gráficos!**")
-    else:
-        st.markdown("---")
-        st.header("💰 Resumo da Carteira")
-    
-    # Combina dataframes US e BR
     dfs_to_combine = []
     if US_STOCKS and 'df_us' in locals() and not df_us.empty:
         dfs_to_combine.append(df_us)
     if BR_FIIS and 'df_br' in locals() and not df_br.empty:
         dfs_to_combine.append(df_br)
     
-    if dfs_to_combine:
+    if not dfs_to_combine:
+        st.markdown("---")
+        st.info("💡 **Clique em '🔄 Atualizar Cotações' para ver o resumo da carteira e gráficos!**")
+    else:
+        st.markdown("---")
+        st.header("💰 Resumo da Carteira")
+        
         df_combined = pd.concat(dfs_to_combine, ignore_index=True)
         
         # Filtra apenas ativos com quantidade
@@ -1541,8 +1557,15 @@ if ASSET_QUANTITIES:
         if not df_with_qty.empty:
             # Calcula totais
             total_invested = df_with_qty["Valor Posição"].sum()
-            total_gain_if_target = df_with_qty["Ganho se Alvo"].sum()
-            total_loss_if_stop = df_with_qty["Perda se Stop"].sum()
+            total_realizado = df_with_qty["Realizado ($)"].sum()
+            total_gain_if_target = df_with_qty["Projeção Alvo ($)"].sum()
+            total_loss_if_stop = df_with_qty["Projeção Stop ($)"].sum()
+            
+            # Percentual realizado
+            if total_invested > 0:
+                perc_realizado = (total_realizado / total_invested) * 100
+            else:
+                perc_realizado = 0
             
             # Relação risco/retorno
             if total_loss_if_stop > 0:
@@ -1551,30 +1574,45 @@ if ASSET_QUANTITIES:
                 risk_reward_ratio = 0
             
             # Exibe resumo em colunas
-            col1, col2, col3, col4 = st.columns(4)
+            col1, col2, col3, col4, col5 = st.columns(5)
             
             with col1:
                 st.metric(
-                    label="📊 Valor Total Investido",
+                    label="📊 Valor Total Posição",
                     value=f"${total_invested:,.0f}" if US_STOCKS else f"R$ {total_invested:,.0f}",
                     help="Soma do valor atual de todas as posições"
                 )
             
             with col2:
                 st.metric(
-                    label="🎯 Ganho Potencial Total",
+                    label="💰 Realizado",
+                    value=f"${total_realizado:,.2f}" if US_STOCKS else f"R$ {total_realizado:,.2f}",
+                    delta=f"{perc_realizado:+.2f}%",
+                    help="Ganho/Perda real desde suas entradas"
+                )
+            
+            with col3:
+                st.metric(
+                    label="🎯 Projeção Alvo",
                     value=f"${total_gain_if_target:,.0f}" if US_STOCKS else f"R$ {total_gain_if_target:,.0f}",
                     delta=f"+{(total_gain_if_target/total_invested)*100:.1f}%",
                     help="Lucro se todos os ativos atingirem seus alvos"
                 )
             
-            with col3:
+            with col4:
                 st.metric(
-                    label="🛑 Perda Máxima Total",
+                    label="🛑 Projeção Stop",
                     value=f"${total_loss_if_stop:,.0f}" if US_STOCKS else f"R$ {total_loss_if_stop:,.0f}",
                     delta=f"-{(total_loss_if_stop/total_invested)*100:.1f}%",
                     delta_color="inverse",
                     help="Perda se todos os stops forem acionados"
+                )
+            
+            with col5:
+                st.metric(
+                    label="📈 Risco/Retorno",
+                    value=f"{risk_reward_ratio:.2f}:1",
+                    help="Quanto você pode ganhar para cada $1 de risco"
                 )
             
             with col4:
