@@ -740,7 +740,7 @@ if US_STOCKS:
                     disabled=True
                 ),
                 "ATR %": st.column_config.NumberColumn(
-                    "Volatilidade %",
+                    "Volatilidade (ATR) %",
                     format="%.1f%%",
                     help="Oscilação diária média. <2% = estável, 2-5% = moderado, >5% = volátil.",
                     disabled=True
@@ -812,7 +812,7 @@ if BR_FIIS:
                     disabled=True
                 ),
                 "ATR %": st.column_config.NumberColumn(
-                    "Volatilidade %",
+                    "Volatilidade (ATR) %",
                     format="%.1f%%",
                     help="Oscilação diária média. <2% = estável, 2-5% = moderado, >5% = volátil.",
                     disabled=True
