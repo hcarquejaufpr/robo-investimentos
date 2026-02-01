@@ -65,16 +65,28 @@ def init_database():
             )
         ''')
         
-        # Cria usuário admin padrão se não existir
+        # Garante que usuário admin existe (atualiza se necessário)
         cursor.execute('SELECT COUNT(*) FROM users WHERE username = ?', ('admin',))
         if cursor.fetchone()[0] == 0:
             cursor.execute(
                 'INSERT INTO users (username, password, name, email) VALUES (?, ?, ?, ?)',
                 ('admin', 'investidor2026', 'Administrador', 'admin@robo-investimentos.com')
             )
+            print("✅ Usuário admin criado")
+        else:
+            # Atualiza email se estiver vazio
+            cursor.execute(
+                'UPDATE users SET email = ? WHERE username = ? AND (email IS NULL OR email = "")',
+                ('admin@robo-investimentos.com', 'admin')
+            )
         
         conn.commit()
         print(f"✅ Banco de dados inicializado: {DB_PATH}")
+        
+        # Debug: mostra usuários existentes
+        cursor.execute('SELECT username, email FROM users')
+        users_list = cursor.fetchall()
+        print(f"📊 Usuários no banco: {[dict(u) for u in users_list]}")
 
 # ============================================================================
 # FUNÇÕES DE USUÁRIOS
