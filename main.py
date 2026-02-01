@@ -934,20 +934,44 @@ def get_market_data(tickers, multiplier, individual_multipliers=None, asset_quan
             current_multiplier = individual_multipliers.get(ticker_clean, multiplier)
             
             # ================================================================
-            # RSI TERMÔMETRO (Visual de Sobrecompra/Sobrevenda)
+            # TRAVA DE SEGURANÇA AUTOMÁTICA - STOP LOSS INTELIGENTE
             # ================================================================
+            # O sistema força automaticamente 1.0x ATR em situações de risco:
+            # 1. RSI >= 70 (Sobrecompra/Topo)
+            # 2. Tendência de Baixa (Preço < SMA 20)
             
+            # Verifica condições de risco
+            is_overbought = last_rsi >= 70  # Sobrecompra (possível topo)
+            is_downtrend = last_close < last_sma  # Tendência de baixa
+            
+            # Define RSI Status
             if last_rsi >= 70:
                 rsi_status = f"🔥 ALERTA: CARO ({last_rsi:.1f})"
-                # LÓGICA INTELIGENTE: RSI > 70 = Sobrecomprado → SEMPRE força Stop 1.0x ATR
-                # Proteção crítica prevalece sobre ajustes manuais (segurança em topos)
-                stop_multiplier = 1.0
             elif last_rsi <= 30:
                 rsi_status = f"❄️ Barato ({last_rsi:.1f})"
-                stop_multiplier = current_multiplier  # Usa o multiplicador configurado
             else:
                 rsi_status = f"Neutro ({last_rsi:.1f})"
-                stop_multiplier = current_multiplier  # Usa o multiplicador configurado
+            
+            # LÓGICA DE SEGURANÇA: Força 1.0x se houver risco
+            if is_overbought or is_downtrend:
+                stop_multiplier = 1.0
+                
+                # Identifica o motivo da proteção automática
+                reasons = []
+                if is_overbought:
+                    reasons.append("RSI≥70")
+                if is_downtrend:
+                    reasons.append("Baixa")
+                
+                mult_display = f"1.0x 🛡️ ({', '.join(reasons)})"
+            else:
+                # Nenhum risco detectado: usa multiplicador configurado
+                stop_multiplier = current_multiplier
+                
+                if has_manual_adjustment:
+                    mult_display = f"{stop_multiplier:.1f}x ✏️"  # Ajuste manual
+                else:
+                    mult_display = f"{stop_multiplier:.1f}x"  # Slider padrão
             
             # ================================================================
             # CÁLCULO DE PREÇOS ESTRATÉGICOS
@@ -1007,7 +1031,7 @@ def get_market_data(tickers, multiplier, individual_multipliers=None, asset_quan
                 "Ganho se Alvo": gain_if_target if quantity > 0 else "-",
                 "Perda se Stop": loss_if_stop if quantity > 0 else "-",
                 "Distância Stop (%)": ((last_close - stop_price) / last_close) * 100,
-                "ATR Mult.": stop_multiplier,  # CORRIGIDO: Mostra o multiplicador USADO no stop, não o configurado
+                "ATR Mult. ⚙️": mult_display,  # Mostra origem do multiplicador (Auto/Manual/Slider)
                 "Tendência": tendencia,
                 "Histórico": df['Close'], # Salva para o gráfico
                 # DEBUG INFO
