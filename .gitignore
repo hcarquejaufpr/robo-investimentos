@@ -12,5 +12,8 @@ venv/
 # Database de usuários (contém senhas)
 users.json
 
+# Carteiras dos usuários (dados privados)
+user_portfolios.json
+
 # Test files
 test_*.py

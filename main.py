@@ -24,6 +24,50 @@ st.set_page_config(
 import json
 import os
 
+# ============================================================================
+# GERENCIAMENTO DE CARTEIRAS POR USUÁRIO
+# ============================================================================
+
+def load_user_portfolio(username):
+    """Carrega a carteira específica do usuário."""
+    portfolios_file = "user_portfolios.json"
+    
+    # Carteira padrão (vazia)
+    default_portfolio = {
+        "US_STOCKS": [],
+        "BR_FIIS": [],
+        "TESOURO_DIRETO": {},
+        "PARAMETROS": {
+            "MULTIPLIER_US": 1.2,
+            "MULTIPLIER_BR": 1.0
+        }
+    }
+    
+    if os.path.exists(portfolios_file):
+        with open(portfolios_file, 'r') as f:
+            portfolios = json.load(f)
+            return portfolios.get(username, default_portfolio)
+    
+    return default_portfolio
+
+def save_user_portfolio(username, portfolio):
+    """Salva a carteira específica do usuário."""
+    portfolios_file = "user_portfolios.json"
+    
+    # Carrega todas as carteiras
+    if os.path.exists(portfolios_file):
+        with open(portfolios_file, 'r') as f:
+            portfolios = json.load(f)
+    else:
+        portfolios = {}
+    
+    # Atualiza a carteira do usuário
+    portfolios[username] = portfolio
+    
+    # Salva
+    with open(portfolios_file, 'w') as f:
+        json.dump(portfolios, f, indent=2)
+
 def load_users():
     """Carrega usuários do arquivo ou secrets."""
     try:
@@ -199,8 +243,24 @@ def check_password():
         return True
 
 # Verifica autenticação antes de mostrar o app
-if not check_password():
+if not check_authentication():
     st.stop()
+
+# ============================================================================
+# CARREGA CARTEIRA DO USUÁRIO LOGADO
+# ============================================================================
+
+# Obtém username do usuário logado
+current_username = st.session_state.get("username", "admin")
+
+# Carrega a carteira do usuário
+user_portfolio = load_user_portfolio(current_username)
+
+# Usa as configurações da carteira do usuário ao invés do config.py
+US_STOCKS = user_portfolio.get("US_STOCKS", [])
+BR_FIIS = user_portfolio.get("BR_FIIS", [])
+TESOURO_DIRETO = user_portfolio.get("TESOURO_DIRETO", {})
+PARAMETROS = user_portfolio.get("PARAMETROS", {"MULTIPLIER_US": 1.2, "MULTIPLIER_BR": 1.0})
 
 # ============================================================================
 # APP PRINCIPAL (só executa se autenticado)
@@ -235,20 +295,18 @@ st.sidebar.caption(f"🕒 Atualizado: {datetime.now().strftime('%H:%M:%S')}")
 mult_us = st.sidebar.slider(
     "🇺🇸 Stop Ações EUA (x ATR)", 
     1.0, 3.0, 
-    float(config.PARAMETROS['MULTIPLIER_US']), 
+    float(PARAMETROS['MULTIPLIER_US']), 
     0.1
 )
 
 mult_br = st.sidebar.slider(
     "🇧🇷 Stop FIIs Brasil (x ATR)", 
     1.0, 3.0, 
-    float(config.PARAMETROS['MULTIPLIER_BR']), 
+    float(PARAMETROS['MULTIPLIER_BR']), 
     0.1
 )
 
 if st.sidebar.button("🔄 Atualizar Cotações"):
-    # Recarrega o módulo config
-    reload(config)
     # Limpa o cache das funções
     st.cache_data.clear()
     # Força atualização da página
@@ -261,7 +319,7 @@ st.sidebar.header("📝 Gerenciar Ativos")
 with st.sidebar.expander("🇺🇸 Ações Americanas", expanded=False):
     us_stocks_text = st.text_area(
         "Um ticker por linha (ex: AAPL)",
-        value="\n".join(config.US_STOCKS),
+        value="\n".join(US_STOCKS),
         height=100,
         key="us_stocks"
     )
@@ -269,7 +327,7 @@ with st.sidebar.expander("🇺🇸 Ações Americanas", expanded=False):
 with st.sidebar.expander("🇧🇷 FIIs Brasileiros", expanded=False):
     br_fiis_text = st.text_area(
         "Um ticker por linha com .SA (ex: HGLG11.SA)",
-        value="\n".join(config.BR_FIIS),
+        value="\n".join(BR_FIIS),
         height=100,
         key="br_fiis"
     )
@@ -279,7 +337,7 @@ with st.sidebar.expander("💰 Tesouro Direto", expanded=False):
     st.caption("Exemplo: Tesouro Selic 2027 | 2024-02-15")
     
     tesouro_lines = []
-    for nome, dados in config.TESOURO_DIRETO.items():
+    for nome, dados in TESOURO_DIRETO.items():
         tesouro_lines.append(f"{nome} | {dados['data_compra']}")
     
     tesouro_text = st.text_area(
@@ -307,45 +365,21 @@ if st.sidebar.button("💾 Salvar Configurações", type="primary"):
                     data = parts[1].strip()
                     new_tesouro[nome] = {'data_compra': data}
         
-        # Gera o novo conteúdo do config.py
-        config_content = f'''"""
-Arquivo de Configuração do Robô de Investimentos
-================================================
-Altere os tickers e datas conforme sua carteira real.
-"""
-
-# ============================================================================
-# AÇÕES AMERICANAS
-# ============================================================================
-US_STOCKS = {new_us_stocks}
-
-# ============================================================================
-# FUNDOS IMOBILIÁRIOS BRASILEIROS (FIIs)
-# ============================================================================
-BR_FIIS = {new_br_fiis}
-
-# ============================================================================
-# TESOURO DIRETO
-# ============================================================================
-TESOURO_DIRETO = {new_tesouro}
-
-# ============================================================================
-# PARÂMETROS DE ANÁLISE TÉCNICA
-# ============================================================================
-PARAMETROS = {{
-    'MULTIPLIER_US': {mult_us},
-    'MULTIPLIER_BR': {mult_br},
-}}
-'''
+        # Cria o objeto de carteira do usuário
+        user_portfolio = {
+            "US_STOCKS": new_us_stocks,
+            "BR_FIIS": new_br_fiis,
+            "TESOURO_DIRETO": new_tesouro,
+            "PARAMETROS": {
+                "MULTIPLIER_US": mult_us,
+                "MULTIPLIER_BR": mult_br
+            }
+        }
         
-        # Salva o arquivo
-        with open('config.py', 'w', encoding='utf-8') as f:
-            f.write(config_content)
+        # Salva a carteira específica deste usuário
+        save_user_portfolio(current_username, user_portfolio)
         
-        # RECARREGA o módulo config
-        reload(config)
-        
-        st.sidebar.success("✅ Configurações salvas e recarregadas!")
+        st.sidebar.success("✅ Sua carteira foi salva!")
         st.sidebar.info("Clique em 'Atualizar Cotações' para ver os novos dados")
         
     except Exception as e:
@@ -476,9 +510,9 @@ col1, col2 = st.columns(2)
 
 with col1:
     st.subheader("🇺🇸 Ações Americanas")
-    if config.US_STOCKS:
-        st.caption(f"📊 Analisando {len(config.US_STOCKS)} ticker(s): {', '.join(config.US_STOCKS)}")
-        df_us = get_market_data(config.US_STOCKS, mult_us)
+    if US_STOCKS:
+        st.caption(f"📊 Analisando {len(US_STOCKS)} ticker(s): {', '.join(US_STOCKS)}")
+        df_us = get_market_data(US_STOCKS, mult_us)
         if not df_us.empty:
             st.dataframe(
                 df_us[["Ticker", "Preço Atual", "Stop Loss Sugerido", "Distância (%)", "Tendência"]],
@@ -491,9 +525,9 @@ with col1:
 
 with col2:
     st.subheader("🇧🇷 FIIs Brasileiros")
-    if config.BR_FIIS:
-        st.caption(f"📊 Analisando {len(config.BR_FIIS)} ticker(s): {', '.join(config.BR_FIIS)}")
-        df_br = get_market_data(config.BR_FIIS, mult_br)
+    if BR_FIIS:
+        st.caption(f"📊 Analisando {len(BR_FIIS)} ticker(s): {', '.join(BR_FIIS)}")
+        df_br = get_market_data(BR_FIIS, mult_br)
         if not df_br.empty:
             st.dataframe(
                 df_br[["Ticker", "Preço Atual", "Stop Loss Sugerido", "Distância (%)", "Tendência"]],
@@ -507,8 +541,8 @@ with col2:
 # 2. Otimização Fiscal
 st.header("💰 Tesouro Direto: Análise de IR")
 
-if config.TESOURO_DIRETO:
-    df_tesouro = analyze_taxes(config.TESOURO_DIRETO)
+if TESOURO_DIRETO:
+    df_tesouro = analyze_taxes(TESOURO_DIRETO)
     
     for _, row in df_tesouro.iterrows():
         if row['Cor'] == 'red':
