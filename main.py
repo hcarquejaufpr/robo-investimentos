@@ -6,6 +6,7 @@ from importlib import reload
 import ssl
 import hashlib
 import config  # Importa suas configurações do config.py
+import plotly.graph_objects as go
 
 # Desabilita verificação SSL (necessário em algumas redes corporativas)
 ssl._create_default_https_context = ssl._create_unverified_context
@@ -268,6 +269,12 @@ INDIVIDUAL_MULTIPLIERS = user_portfolio.get("INDIVIDUAL_MULTIPLIERS", {})
 # Quantidades de ativos (para cálculo de ganho/perda)
 ASSET_QUANTITIES = user_portfolio.get("ASSET_QUANTITIES", {})
 
+# Histórico de operações (compras/vendas)
+OPERATIONS_HISTORY = user_portfolio.get("OPERATIONS_HISTORY", [])
+
+# Histórico de snapshots da carteira (para gráfico de evolução)
+PORTFOLIO_SNAPSHOTS = user_portfolio.get("PORTFOLIO_SNAPSHOTS", [])
+
 # ============================================================================
 # APP PRINCIPAL (só executa se autenticado)
 # ============================================================================
@@ -287,6 +294,42 @@ st.markdown("""
 * **Renda Variável:** Usa Volatilidade (ATR) para definir o preço de saída (Stop Loss).
 * **Tesouro Direto:** Analisa a tabela regressiva de IR para economizar impostos.
 """)
+
+# --- Sistema de Alertas ---
+if US_STOCKS or BR_FIIS:
+    # Pega dados para análise de alertas
+    alerts = []
+    
+    try:
+        if US_STOCKS:
+            df_us_alerts = get_market_data(US_STOCKS, PARAMETROS.get("MULTIPLIER_US", 1.2), 
+                                          individual_multipliers=INDIVIDUAL_MULTIPLIERS, 
+                                          asset_quantities=ASSET_QUANTITIES)
+            if not df_us_alerts.empty:
+                # Verifica ativos perto do stop (distância < 5%)
+                near_stop_us = df_us_alerts[df_us_alerts["Distância Stop (%)"] < 5.0]
+                if not near_stop_us.empty:
+                    alerts.append(f"🛑 **{len(near_stop_us)} ação(ões) americana(s) perto do stop (<5%)**")
+                
+                # Verifica ativos que atingiram alvo (potencial < 1%)
+                at_target_us = df_us_alerts[df_us_alerts["Potencial"].str.contains("⚠️", na=False) == False]
+                at_target_us = at_target_us[pd.to_numeric(at_target_us["Potencial"].str.replace("%", "").str.replace(" ⚠️", ""), errors='coerce') < 1.0]
+                if not at_target_us.empty:
+                    alerts.append(f"🎯 **{len(at_target_us)} ação(ões) americana(s) próxima(s) do alvo (<1%)**")
+        
+        if BR_FIIS:
+            df_br_alerts = get_market_data(BR_FIIS, PARAMETROS.get("MULTIPLIER_BR", 1.0), 
+                                          individual_multipliers=INDIVIDUAL_MULTIPLIERS, 
+                                          asset_quantities=ASSET_QUANTITIES)
+            if not df_br_alerts.empty:
+                near_stop_br = df_br_alerts[df_br_alerts["Distância Stop (%)"] < 5.0]
+                if not near_stop_br.empty:
+                    alerts.append(f"🛑 **{len(near_stop_br)} FII(s) perto do stop (<5%)**")
+    except:
+        pass  # Ignora erros na análise de alertas
+    
+    if alerts:
+        st.warning("⚠️ **ALERTAS:** " + " | ".join(alerts))
 
 # --- Sidebar (Barra Lateral de Controles) ---
 st.sidebar.header("⚙️ Painel de Controle")
@@ -444,6 +487,55 @@ with st.sidebar.expander("📊 Quantidade de Ativos (Opcional)", expanded=False)
         key="asset_quantities",
         help="Deixe em branco se não quiser ver cálculos financeiros. Útil para análise de portfólio."
     )
+
+# --- Registrar Operação ---
+with st.sidebar.expander("📝 Registrar Operação (Compra/Venda)", expanded=False):
+    st.markdown("**Registre suas transações para acompanhar o histórico!**")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        op_type = st.selectbox("Tipo", ["COMPRA", "VENDA"], key="op_type")
+    with col2:
+        op_ticker = st.text_input("Ticker", key="op_ticker", placeholder="Ex: AAPL").upper()
+    
+    col3, col4 = st.columns(2)
+    with col3:
+        op_quantity = st.number_input("Quantidade", min_value=1, value=10, key="op_quantity")
+    with col4:
+        op_price = st.number_input("Preço", min_value=0.01, value=100.0, step=0.1, key="op_price")
+    
+    op_date = st.date_input("Data", value=datetime.now(), key="op_date")
+    op_notes = st.text_input("Observações (opcional)", key="op_notes", placeholder="Ex: Stop loss acionado")
+    
+    if st.button("➕ Adicionar Operação", type="primary", use_container_width=True):
+        if op_ticker:
+            new_operation = {
+                "data": op_date.strftime("%Y-%m-%d"),
+                "tipo": op_type,
+                "ticker": op_ticker,
+                "quantidade": op_quantity,
+                "preco": op_price,
+                "total": op_quantity * op_price,
+                "observacoes": op_notes
+            }
+            
+            OPERATIONS_HISTORY.append(new_operation)
+            
+            # Atualiza quantidade automaticamente
+            if op_type == "COMPRA":
+                ASSET_QUANTITIES[op_ticker] = ASSET_QUANTITIES.get(op_ticker, 0) + op_quantity
+            else:  # VENDA
+                ASSET_QUANTITIES[op_ticker] = max(0, ASSET_QUANTITIES.get(op_ticker, 0) - op_quantity)
+            
+            # Salva imediatamente
+            user_portfolio["OPERATIONS_HISTORY"] = OPERATIONS_HISTORY
+            user_portfolio["ASSET_QUANTITIES"] = ASSET_QUANTITIES
+            save_user_portfolio(current_username, user_portfolio)
+            
+            st.success(f"✅ Operação registrada: {op_type} {op_quantity} {op_ticker} @ ${op_price:.2f}")
+            st.rerun()
+        else:
+            st.error("❌ Ticker é obrigatório!")
 
 if st.sidebar.button("💾 Salvar Configurações", type="primary", help="Salva sua carteira pessoal (ativos e parâmetros). Seus dados ficam separados de outros usuários."):
     try:
@@ -1063,6 +1155,139 @@ if ASSET_QUANTITIES:
                 )
             
             st.info("💡 **Dica:** Uma relação risco/retorno > 2:1 é considerada boa para swing trading.")
+            
+            # Salva snapshot da carteira para o gráfico de evolução
+            today = datetime.now().strftime("%Y-%m-%d")
+            snapshot_exists = any(s["data"] == today for s in PORTFOLIO_SNAPSHOTS)
+            
+            if not snapshot_exists:
+                new_snapshot = {
+                    "data": today,
+                    "valor_total": float(total_invested),
+                    "ganho_potencial": float(total_gain_if_target),
+                    "perda_potencial": float(total_loss_if_stop)
+                }
+                PORTFOLIO_SNAPSHOTS.append(new_snapshot)
+                user_portfolio["PORTFOLIO_SNAPSHOTS"] = PORTFOLIO_SNAPSHOTS
+                save_user_portfolio(current_username, user_portfolio)
+
+# --- Histórico de Operações ---
+if OPERATIONS_HISTORY:
+    st.markdown("---")
+    st.header("📝 Histórico de Operações")
+    
+    df_operations = pd.DataFrame(OPERATIONS_HISTORY)
+    df_operations = df_operations.sort_values("data", ascending=False)
+    
+    # Formata para exibição
+    df_operations_display = df_operations.copy()
+    df_operations_display["Data"] = pd.to_datetime(df_operations_display["data"]).dt.strftime("%d/%m/%Y")
+    df_operations_display["Tipo"] = df_operations_display["tipo"]
+    df_operations_display["Ticker"] = df_operations_display["ticker"]
+    df_operations_display["Qtd"] = df_operations_display["quantidade"]
+    df_operations_display["Preço"] = df_operations_display["preco"].apply(lambda x: f"${x:.2f}")
+    df_operations_display["Total"] = df_operations_display["total"].apply(lambda x: f"${x:.2f}")
+    df_operations_display["Observações"] = df_operations_display["observacoes"]
+    
+    st.dataframe(
+        df_operations_display[["Data", "Tipo", "Ticker", "Qtd", "Preço", "Total", "Observações"]],
+        use_container_width=True,
+        hide_index=True
+    )
+    
+    col1, col2 = st.columns([3, 1])
+    with col2:
+        if st.button("🗑️ Limpar Histórico", help="Remove todas as operações registradas", type="secondary"):
+            user_portfolio["OPERATIONS_HISTORY"] = []
+            save_user_portfolio(current_username, user_portfolio)
+            st.success("✅ Histórico limpo!")
+            st.rerun()
+
+# --- Gráfico de Evolução da Carteira ---
+if PORTFOLIO_SNAPSHOTS and len(PORTFOLIO_SNAPSHOTS) > 1:
+    st.markdown("---")
+    st.header("📈 Evolução da Carteira")
+    
+    df_snapshots = pd.DataFrame(PORTFOLIO_SNAPSHOTS)
+    df_snapshots["data"] = pd.to_datetime(df_snapshots["data"])
+    df_snapshots = df_snapshots.sort_values("data")
+    
+    # Calcula valores projetados
+    df_snapshots["Valor Alvo"] = df_snapshots["valor_total"] + df_snapshots["ganho_potencial"]
+    df_snapshots["Valor Stop"] = df_snapshots["valor_total"] - df_snapshots["perda_potencial"]
+    
+    import plotly.graph_objects as go
+    
+    fig = go.Figure()
+    
+    # Linha principal - Valor atual
+    fig.add_trace(go.Scatter(
+        x=df_snapshots["data"],
+        y=df_snapshots["valor_total"],
+        mode='lines+markers',
+        name='Valor Investido',
+        line=dict(color='blue', width=3),
+        marker=dict(size=8)
+    ))
+    
+    # Linha de alvo
+    fig.add_trace(go.Scatter(
+        x=df_snapshots["data"],
+        y=df_snapshots["Valor Alvo"],
+        mode='lines',
+        name='Se Atingir Alvos',
+        line=dict(color='green', width=2, dash='dash')
+    ))
+    
+    # Linha de stop
+    fig.add_trace(go.Scatter(
+        x=df_snapshots["data"],
+        y=df_snapshots["Valor Stop"],
+        mode='lines',
+        name='Se Acionar Stops',
+        line=dict(color='red', width=2, dash='dash')
+    ))
+    
+    # Marcadores de operações
+    if OPERATIONS_HISTORY:
+        df_ops = pd.DataFrame(OPERATIONS_HISTORY)
+        df_ops["data"] = pd.to_datetime(df_ops["data"])
+        
+        # Merge com snapshots para pegar valor da carteira na data
+        df_ops_plot = df_ops.merge(df_snapshots[["data", "valor_total"]], on="data", how="left")
+        
+        compras = df_ops_plot[df_ops_plot["tipo"] == "COMPRA"]
+        vendas = df_ops_plot[df_ops_plot["tipo"] == "VENDA"]
+        
+        if not compras.empty:
+            fig.add_trace(go.Scatter(
+                x=compras["data"],
+                y=compras["valor_total"],
+                mode='markers',
+                name='Compras',
+                marker=dict(size=12, color='green', symbol='triangle-up', line=dict(width=2, color='darkgreen'))
+            ))
+        
+        if not vendas.empty:
+            fig.add_trace(go.Scatter(
+                x=vendas["data"],
+                y=vendas["valor_total"],
+                mode='markers',
+                name='Vendas',
+                marker=dict(size=12, color='red', symbol='triangle-down', line=dict(width=2, color='darkred'))
+            ))
+    
+    fig.update_layout(
+        title="Evolução do Valor da Carteira ao Longo do Tempo",
+        xaxis_title="Data",
+        yaxis_title="Valor ($)",
+        hovermode='x unified',
+        height=500
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
+    
+    st.caption("💡 **Dica:** O gráfico é atualizado automaticamente a cada acesso. Triângulos verdes = compras, vermelhos = vendas.")
 
 # 2. Otimização Fiscal
 st.header("💰 Tesouro Direto: Análise de IR")
