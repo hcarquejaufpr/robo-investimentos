@@ -330,12 +330,67 @@ if US_STOCKS or BR_FIIS:
     
     if alerts:
         st.warning("⚠️ **ALERTAS:** " + " | ".join(alerts))
+    else:
+        st.success("✅ Nenhum alerta no momento. Todos os ativos estão dentro dos parâmetros.")
 
 # --- Sidebar (Barra Lateral de Controles) ---
 st.sidebar.header("⚙️ Painel de Controle")
 
 # Mostra informações do usuário logado
 st.sidebar.success(f"✅ Logado como: **{st.session_state.get('username', 'admin')}**")
+
+# --- Sistema de Notificações ---
+with st.sidebar.expander("📧 Notificações Diárias", expanded=False):
+    st.markdown("""Configure para receber alertas automáticos:""")
+    
+    enable_notifications = st.checkbox(
+        "Ativar notificações",
+        value=user_portfolio.get("NOTIFICATIONS", {}).get("enabled", False),
+        help="Receba resumo diário da carteira"
+    )
+    
+    if enable_notifications:
+        notification_email = st.text_input(
+            "Email para alertas:",
+            value=user_portfolio.get("NOTIFICATIONS", {}).get("email", ""),
+            placeholder="seu@email.com"
+        )
+        
+        notification_time = st.time_input(
+            "Horário de envio:",
+            value=datetime.strptime(user_portfolio.get("NOTIFICATIONS", {}).get("time", "09:00"), "%H:%M").time()
+        )
+        
+        if st.button("💾 Salvar Configurações", use_container_width=True):
+            if not user_portfolio.get("NOTIFICATIONS"):
+                user_portfolio["NOTIFICATIONS"] = {}
+            
+            user_portfolio["NOTIFICATIONS"]["enabled"] = enable_notifications
+            user_portfolio["NOTIFICATIONS"]["email"] = notification_email
+            user_portfolio["NOTIFICATIONS"]["time"] = notification_time.strftime("%H:%M")
+            save_user_portfolio(current_username, user_portfolio)
+            st.success("✅ Configurações salvas!")
+        
+        st.info("""
+        📱 **Funcionalidades futuras:**
+        - ✉️ Email diário com resumo
+        - 💬 WhatsApp via API (Twilio)
+        - 🔔 Alertas instantâneos
+        
+        ⚠️ Requer configuração de servidor SMTP ou API externa.
+        """)
+    
+    if st.button("🧪 Testar Notificação Agora", disabled=not enable_notifications, use_container_width=True):
+        st.warning("""
+        🚧 **Funcionalidade em desenvolvimento**
+        
+        Para implementar notificações reais, você precisará:
+        1. Configurar servidor SMTP (Gmail, SendGrid, etc.)
+        2. Para WhatsApp: API Twilio ou similar
+        3. Adicionar credenciais em secrets.toml
+        
+        Exemplo de implementação disponível em: [docs/notifications.md](https://github.com/hcarquejaufpr/robo-investimentos)
+        """)
 
 # Mostra hora da última atualização
 st.sidebar.caption(f"🕒 Atualizado: {datetime.now().strftime('%H:%M:%S')}")
@@ -1204,9 +1259,12 @@ if OPERATIONS_HISTORY:
             st.rerun()
 
 # --- Gráfico de Evolução da Carteira ---
-if PORTFOLIO_SNAPSHOTS and len(PORTFOLIO_SNAPSHOTS) > 1:
+if PORTFOLIO_SNAPSHOTS and len(PORTFOLIO_SNAPSHOTS) >= 1:
     st.markdown("---")
     st.header("📈 Evolução da Carteira")
+    
+    if len(PORTFOLIO_SNAPSHOTS) == 1:
+        st.info("💡 Primeiro registro salvo! Continue usando o sistema para acompanhar a evolução ao longo do tempo.")
     
     df_snapshots = pd.DataFrame(PORTFOLIO_SNAPSHOTS)
     df_snapshots["data"] = pd.to_datetime(df_snapshots["data"])
