@@ -1007,7 +1007,7 @@ def get_market_data(tickers, multiplier, individual_multipliers=None, asset_quan
                 "Ganho se Alvo": gain_if_target if quantity > 0 else "-",
                 "Perda se Stop": loss_if_stop if quantity > 0 else "-",
                 "Distância Stop (%)": ((last_close - stop_price) / last_close) * 100,
-                "ATR Mult.": current_multiplier,
+                "ATR Mult.": stop_multiplier,  # CORRIGIDO: Mostra o multiplicador USADO no stop, não o configurado
                 "Tendência": tendencia,
                 "Histórico": df['Close'], # Salva para o gráfico
                 # DEBUG INFO
