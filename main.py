@@ -704,12 +704,6 @@ with st.sidebar.expander("📊 Quantidade de Ativos (Opcional)", expanded=False)
     - 🛑 Perda potencial em $ (se acionar stops)
     """)
     
-    # Inicializa session_state para quantidades se não existir
-    if "quantities_us" not in st.session_state:
-        st.session_state.quantities_us = None
-    if "quantities_br" not in st.session_state:
-        st.session_state.quantities_br = None
-    
     # --- 🇺🇸 Quantidades EUA ---
     with st.expander("🇺🇸 Quantidades EUA", expanded=True):
         # Prepara DataFrame pré-preenchido com tickers US
@@ -741,8 +735,6 @@ with st.sidebar.expander("📊 Quantidade de Ativos (Opcional)", expanded=False)
             use_container_width=True,
             key="qty_us_editor"
         )
-        
-        st.session_state.quantities_us = edited_us
     
     # --- 🇧🇷 Quantidades Brasil ---
     with st.expander("🇧🇷 Quantidades Brasil", expanded=True):
@@ -775,8 +767,6 @@ with st.sidebar.expander("📊 Quantidade de Ativos (Opcional)", expanded=False)
             use_container_width=True,
             key="qty_br_editor"
         )
-        
-        st.session_state.quantities_br = edited_br
 
 # --- Registrar Operação ---
 with st.sidebar.expander("📝 Registrar Operação (Compra/Venda)", expanded=False):
@@ -878,15 +868,15 @@ if st.sidebar.button("💾 Salvar Carteira", type="primary", help="Salva sua car
         new_asset_quantities = {}
         
         # Combina quantidades de US e BR dos data_editors
-        if st.session_state.quantities_us is not None:
-            for _, row in st.session_state.quantities_us.iterrows():
+        if "qty_us_editor" in st.session_state:
+            for _, row in st.session_state.qty_us_editor.iterrows():
                 ticker = row["Ticker"]
                 qty = row["Quantidade"]
                 if pd.notna(qty) and qty > 0:
                     new_asset_quantities[ticker] = float(qty)
         
-        if st.session_state.quantities_br is not None:
-            for _, row in st.session_state.quantities_br.iterrows():
+        if "qty_br_editor" in st.session_state:
+            for _, row in st.session_state.qty_br_editor.iterrows():
                 ticker = row["Ticker"]
                 qty = row["Quantidade"]
                 if pd.notna(qty) and qty > 0:
