@@ -1,31 +1,59 @@
-# 🔒 Como Configurar a Senha no Streamlit Cloud
+# 🔒 Sistema de Múltiplos Usuários
 
-## Passo 1: Acesse seu app no Streamlit Cloud
-- Vá em: https://share.streamlit.io
-- Clique em "My apps"
-- Selecione seu app `robo-investimentos`
+## ✨ Funcionalidades
+- ✅ **Cadastro** de novos usuários
+- ✅ **Login** individual
+- ✅ **Logout** seguro
+- ✅ Cada usuário pode ter configurações próprias
 
-## Passo 2: Configure a senha personalizada
-1. Clique no menu **⋮** (3 pontinhos) do app
-2. Selecione **"Settings"**
-3. Vá na aba **"Secrets"**
-4. Cole o seguinte código:
+## 🚀 Como Usar
 
-```toml
-password = "SUA_SENHA_AQUI"
-```
+### 1. **Primeiro Acesso (Usuário Padrão)**
+   - **Usuário:** `admin`
+   - **Senha:** `investidor2026`
 
-5. **Substitua** `SUA_SENHA_AQUI` pela sua senha desejada
-6. Clique em **"Save"**
+### 2. **Criar Nova Conta**
+   - Clique na aba **"📝 Cadastro"**
+   - Preencha:
+     - Nome de usuário
+     - Seu nome completo
+     - Senha (mínimo 6 caracteres)
+     - Confirme a senha
+   - Clique em **"Cadastrar"**
 
-## Passo 3: Teste
-- Recarregue seu app
-- Digite a nova senha para acessar
+### 3. **Fazer Login**
+   - Use seu usuário e senha
+   - Acesse seu dashboard personalizado
+
+### 4. **Sair**
+   - Clique no botão **"🚪 Sair"** no canto superior direito
 
 ## 🛡️ Segurança
-- ✅ A senha NÃO fica no código público do GitHub
-- ✅ Só você tem acesso às configurações de Secrets
-- ✅ A senha é criptografada no Streamlit Cloud
 
-## 📝 Senha Padrão Local
-Quando rodando localmente: `investidor2026`
+### Local (PC)
+- Usuários salvos em `users.json` (não commitado no Git)
+- Senha padrão: `investidor2026`
+
+### Streamlit Cloud (Recomendado)
+Configure usuários permanentes em **Settings > Secrets**:
+
+```toml
+users = '''
+{
+  "admin": {
+    "password": "sua_senha_forte",
+    "name": "Administrador"
+  },
+  "usuario2": {
+    "password": "outra_senha",
+    "name": "João Silva"
+  }
+}
+'''
+```
+
+## 📝 Próximas Melhorias (Futuro)
+- [ ] Carteira individualizada por usuário
+- [ ] Recuperação de senha por email
+- [ ] Níveis de permissão (admin, usuário)
+- [ ] Criptografia de senhas (bcrypt)

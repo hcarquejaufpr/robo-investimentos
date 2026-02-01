@@ -18,69 +18,119 @@ st.set_page_config(
 )
 
 # ============================================================================
-# SISTEMA DE AUTENTICAÇÃO
+# SISTEMA DE AUTENTICAÇÃO MULTI-USUÁRIO
 # ============================================================================
 
-def check_password():
-    """Retorna True se o usuário está autenticado."""
-    
-    def password_entered():
-        """Verifica se a senha está correta."""
-        # Tenta pegar do secrets (Streamlit Cloud) ou usa padrão local
-        try:
-            correct_password = st.secrets["password"]
-        except:
-            # Senha padrão local: "investidor2026"
-            correct_password = "investidor2026"
-        
-        if st.session_state["password"] == correct_password:
-            st.session_state["password_correct"] = True
-            del st.session_state["password"]  # Remove senha da sessão
-        else:
-            st.session_state["password_correct"] = False
+import json
+import os
 
-    # Primeira execução, mostra tela de login
-    if "password_correct" not in st.session_state:
-        st.markdown("""
-        # 🔒 Área Restrita
-        ## Robô de Investimentos - Estratégia de Saída
+def load_users():
+    """Carrega usuários do arquivo ou secrets."""
+    try:
+        # Tenta carregar do Streamlit secrets primeiro
+        users_json = st.secrets.get("users", None)
+        if users_json:
+            return json.loads(users_json)
+    except:
+        pass
+    
+    # Se não existir, carrega do arquivo local
+    users_file = "users.json"
+    if os.path.exists(users_file):
+        with open(users_file, 'r') as f:
+            return json.load(f)
+    
+    # Usuário padrão se não existir nada
+    return {
+        "admin": {
+            "password": "investidor2026",
+            "name": "Administrador"
+        }
+    }
+
+def save_users(users):
+    """Salva usuários no arquivo local."""
+    with open("users.json", 'w') as f:
+        json.dump(users, f, indent=2)
+
+def login_register_page():
+    """Tela de login e registro."""
+    
+    st.markdown("""
+    # 🤖 Robô de Investimentos
+    ## Estratégia de Saída - Análise de Carteira
+    """)
+    
+    tab1, tab2 = st.tabs(["🔐 Login", "📝 Cadastro"])
+    
+    # ========== ABA DE LOGIN ==========
+    with tab1:
+        st.subheader("Acesse sua conta")
         
-        Digite a senha para acessar seu dashboard de investimentos.
-        """)
+        with st.form("login_form"):
+            username = st.text_input("Usuário", key="login_username")
+            password = st.text_input("Senha", type="password", key="login_password")
+            submit = st.form_submit_button("Entrar", type="primary", use_container_width=True)
+            
+            if submit:
+                users = load_users()
+                
+                if username in users and users[username]["password"] == password:
+                    st.session_state["authenticated"] = True
+                    st.session_state["username"] = username
+                    st.session_state["user_name"] = users[username]["name"]
+                    st.rerun()
+                else:
+                    st.error("❌ Usuário ou senha incorretos!")
+    
+    # ========== ABA DE CADASTRO ==========
+    with tab2:
+        st.subheader("Criar nova conta")
         
-        st.text_input(
-            "Senha de Acesso",
-            type="password",
-            on_change=password_entered,
-            key="password",
-            help="Senha padrão local: investidor2026"
-        )
-        
-        st.info("💡 **Dica:** Configure sua senha personalizada em Settings > Secrets no Streamlit Cloud")
+        with st.form("register_form"):
+            new_username = st.text_input("Escolha um usuário", key="reg_username")
+            new_name = st.text_input("Seu nome completo", key="reg_name")
+            new_password = st.text_input("Escolha uma senha", type="password", key="reg_password")
+            new_password2 = st.text_input("Confirme a senha", type="password", key="reg_password2")
+            register = st.form_submit_button("Cadastrar", type="primary", use_container_width=True)
+            
+            if register:
+                # Validações
+                if not new_username or not new_name or not new_password:
+                    st.error("❌ Preencha todos os campos!")
+                elif new_password != new_password2:
+                    st.error("❌ As senhas não coincidem!")
+                elif len(new_password) < 6:
+                    st.error("❌ A senha deve ter pelo menos 6 caracteres!")
+                else:
+                    users = load_users()
+                    
+                    if new_username in users:
+                        st.error("❌ Este usuário já existe!")
+                    else:
+                        # Cria novo usuário
+                        users[new_username] = {
+                            "password": new_password,
+                            "name": new_name
+                        }
+                        save_users(users)
+                        st.success(f"✅ Conta criada com sucesso! Faça login com o usuário: {new_username}")
+    
+    st.markdown("---")
+    st.caption("💡 **Usuário padrão:** admin | **Senha:** investidor2026")
+
+def check_authentication():
+    """Verifica se o usuário está autenticado."""
+    
+    # Se não estiver autenticado, mostra tela de login
+    if "authenticated" not in st.session_state or not st.session_state["authenticated"]:
+        login_register_page()
         return False
     
-    # Senha incorreta
-    elif not st.session_state["password_correct"]:
-        st.markdown("""
-        # 🔒 Área Restrita
-        ## Robô de Investimentos - Estratégia de Saída
-        """)
-        
-        st.text_input(
-            "Senha de Acesso",
-            type="password",
-            on_change=password_entered,
-            key="password"
-        )
-        st.error("❌ Senha incorreta. Tente novamente.")
-        return False
-    
-    # Senha correta
-    else:
-        return True
+    return True
 
 # Verifica autenticação antes de mostrar o app
-if not check_password():
+if not check_authentication():
     st.stop()
 
 # ============================================================================
@@ -156,8 +206,16 @@ if not check_password():
 # APP PRINCIPAL (só executa se autenticado)
 # ============================================================================
 
-# Título e Cabeçalho
-st.title("🤖 Painel de Estratégia de Saída (2026)")
+# Título e Cabeçalho com informações do usuário
+col1, col2 = st.columns([3, 1])
+with col1:
+    st.title("🤖 Painel de Estratégia de Saída (2026)")
+with col2:
+    st.markdown(f"### 👤 {st.session_state.get('user_name', 'Usuário')}")
+    if st.button("🚪 Sair", use_container_width=True):
+        st.session_state.clear()
+        st.rerun()
+
 st.markdown("""
 **Objetivo:** Vender ações e títulos nas próximas 3-4 semanas com o máximo de retorno.
 * **Renda Variável:** Usa Volatilidade (ATR) para definir o preço de saída (Stop Loss).
@@ -166,6 +224,9 @@ st.markdown("""
 
 # --- Sidebar (Barra Lateral de Controles) ---
 st.sidebar.header("⚙️ Painel de Controle")
+
+# Mostra informações do usuário logado
+st.sidebar.success(f"✅ Logado como: **{st.session_state.get('username', 'admin')}**")
 
 # Mostra hora da última atualização
 st.sidebar.caption(f"🕒 Atualizado: {datetime.now().strftime('%H:%M:%S')}")

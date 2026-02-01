@@ -9,5 +9,8 @@ venv/
 # Streamlit
 .streamlit/secrets.toml
 
+# Database de usuários (contém senhas)
+users.json
+
 # Test files
 test_*.py
