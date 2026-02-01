@@ -1176,15 +1176,15 @@ def get_market_data(tickers, multiplier, individual_multipliers=None, asset_quan
                 "Qtd": quantity if quantity > 0 else "-",
                 "Preço Entrada": preco_entrada if preco_entrada > 0 else "-",
                 "Preço Atual": last_close,
-                "Resultado": resultado_real if quantity > 0 else "-",
-                "Resultado (%)": resultado_percentual if quantity > 0 else "-",
+                "Realizado ($)": resultado_real if quantity > 0 else "-",
+                "Realizado (%)": resultado_percentual if quantity > 0 else "-",
                 "Valor Posição": position_value if quantity > 0 else "-",
-                "ATR %": atr_percent,
+                "Volatilidade (ATR) %": atr_percent,
                 "RSI (Termômetro)": rsi_status,
                 "Stop Loss": stop_price,
                 "Alvo (Gain)": gain_target,
-                "Ganho se Alvo": gain_if_target if quantity > 0 else "-",
-                "Perda se Stop": loss_if_stop if quantity > 0 else "-",
+                "Projeção Alvo ($)": gain_if_target if quantity > 0 else "-",
+                "Projeção Stop ($)": loss_if_stop if quantity > 0 else "-",
                 "Potencial": gain_potential_display,
                 "Risco (%)": ((last_close - stop_price) / last_close) * 100,
                 "ATR Mult. ⚙️": mult_display,
@@ -1325,12 +1325,12 @@ if US_STOCKS:
         has_quantities = any(df_us["Qtd"] != "-")
         
         if has_quantities:
-            display_columns = ["Ticker", "Qtd", "Preço Entrada", "Preço Atual", "Resultado", "Resultado (%)", 
-                             "Valor Posição", "ATR %", "RSI (Termômetro)", 
-                             "Stop Loss", "Alvo (Gain)", "Ganho se Alvo", "Perda se Stop", 
+            display_columns = ["Ticker", "Qtd", "Preço Entrada", "Preço Atual", "Realizado ($)", "Realizado (%)", 
+                             "Valor Posição", "Volatilidade (ATR) %", "RSI (Termômetro)", 
+                             "Stop Loss", "Alvo (Gain)", "Projeção Alvo ($)", "Projeção Stop ($)", 
                              "Potencial", "Risco (%)", "Tendência", "ATR Mult. ⚙️"]
         else:
-            display_columns = ["Ticker", "Preço Atual", "ATR %", "RSI (Termômetro)", 
+            display_columns = ["Ticker", "Preço Atual", "Volatilidade (ATR) %", "RSI (Termômetro)", 
                              "Stop Loss", "Alvo (Gain)", "Potencial", "Risco (%)", 
                              "Tendência", "ATR Mult. ⚙️"]
         
@@ -1425,12 +1425,13 @@ if BR_FIIS:
         has_quantities_br = any(df_br["Qtd"] != "-")
         
         if has_quantities_br:
-            display_columns_br = ["Ticker", "Qtd", "Valor Posição", "Preço Atual", "ATR %", "RSI (Termômetro)", 
-                                 "Stop Loss Sugerido", "Alvo (Gain)", "Ganho se Alvo", "Perda se Stop", 
-                                 "Potencial", "Tendência", "ATR Mult. ⚙️"]
+            display_columns_br = ["Ticker", "Qtd", "Preço Entrada", "Preço Atual", "Realizado ($)", "Realizado (%)", 
+                                 "Valor Posição", "Volatilidade (ATR) %", "RSI (Termômetro)", 
+                                 "Stop Loss", "Alvo (Gain)", "Projeção Alvo ($)", "Projeção Stop ($)", 
+                                 "Potencial", "Risco (%)", "Tendência", "ATR Mult. ⚙️"]
         else:
-            display_columns_br = ["Ticker", "Preço Atual", "ATR %", "RSI (Termômetro)", 
-                                 "Stop Loss Sugerido", "Alvo (Gain)", "Potencial", "Distância Stop (%)", 
+            display_columns_br = ["Ticker", "Preço Atual", "Volatilidade (ATR) %", "RSI (Termômetro)", 
+                                 "Stop Loss", "Alvo (Gain)", "Potencial", "Risco (%)", 
                                  "Tendência", "ATR Mult. ⚙️"]
         
         # Configura colunas editáveis
