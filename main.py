@@ -1009,7 +1009,13 @@ def get_market_data(tickers, multiplier, individual_multipliers=None, asset_quan
                 "Distância Stop (%)": ((last_close - stop_price) / last_close) * 100,
                 "ATR Mult.": current_multiplier,
                 "Tendência": tendencia,
-                "Histórico": df['Close'] # Salva para o gráfico
+                "Histórico": df['Close'], # Salva para o gráfico
+                # DEBUG INFO
+                "_RSI_Valor": last_rsi,
+                "_ATR_Absoluto": last_atr,
+                "_Mult_Config": current_multiplier,
+                "_Mult_Usado_Stop": stop_multiplier,
+                "_Stop_Calc": f"{last_close:.2f} - ({last_atr:.2f} × {stop_multiplier}) = {stop_price:.2f}"
             })
             
         except Exception as e:
@@ -1106,6 +1112,30 @@ if US_STOCKS:
     # DEBUG: Mostra os tickers carregados
     with st.expander("🔍 Debug: Tickers Carregados", expanded=False):
         st.json({"US_STOCKS": US_STOCKS, "Total": len(US_STOCKS)})
+    
+    # DEBUG COMPLETO: Mostra cálculos detalhados
+    with st.expander("🐛 DEBUG COMPLETO: Cálculos RSI e Stop Loss", expanded=True):
+        st.warning("**Esta seção mostra os cálculos internos para debug**")
+        
+        debug_df = df_us[["Ticker", "_RSI_Valor", "_ATR_Absoluto", "_Mult_Config", "_Mult_Usado_Stop", "_Stop_Calc"]].copy()
+        debug_df.columns = ["Ticker", "RSI (número)", "ATR ($)", "Mult. Configurado", "Mult. Usado no Stop", "Cálculo do Stop"]
+        
+        st.dataframe(
+            debug_df,
+            use_container_width=True,
+            hide_index=True
+        )
+        
+        st.info("""
+        **Legenda:**
+        - **RSI (número):** Valor numérico do RSI (≥70 = CARO deve forçar 1.0x)
+        - **ATR ($):** Valor absoluto do ATR em dólares
+        - **Mult. Configurado:** Seu ajuste manual ou slider (o que você configurou)
+        - **Mult. Usado no Stop:** O multiplicador realmente usado (deveria ser 1.0 se RSI ≥ 70)
+        - **Cálculo do Stop:** Fórmula completa do cálculo
+        
+        🔍 **Verifique:** Se RSI ≥ 70 mas "Mult. Usado no Stop" não é 1.0, há um bug!
+        """)
     
     df_us = get_market_data(US_STOCKS, mult_us, individual_multipliers=INDIVIDUAL_MULTIPLIERS, asset_quantities=ASSET_QUANTITIES)
     if not df_us.empty:
