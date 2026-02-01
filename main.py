@@ -4,6 +4,7 @@ import pandas as pd
 from datetime import datetime
 from importlib import reload
 import ssl
+import hashlib
 import config  # Importa suas configurações do config.py
 
 # Desabilita verificação SSL (necessário em algumas redes corporativas)
@@ -15,6 +16,145 @@ st.set_page_config(
     page_icon="📈",
     layout="wide"
 )
+
+# ============================================================================
+# SISTEMA DE AUTENTICAÇÃO
+# ============================================================================
+
+def check_password():
+    """Retorna True se o usuário está autenticado."""
+    
+    def password_entered():
+        """Verifica se a senha está correta."""
+        # Tenta pegar do secrets (Streamlit Cloud) ou usa padrão local
+        try:
+            correct_password = st.secrets["password"]
+        except:
+            # Senha padrão local: "investidor2026"
+            correct_password = "investidor2026"
+        
+        if st.session_state["password"] == correct_password:
+            st.session_state["password_correct"] = True
+            del st.session_state["password"]  # Remove senha da sessão
+        else:
+            st.session_state["password_correct"] = False
+
+    # Primeira execução, mostra tela de login
+    if "password_correct" not in st.session_state:
+        st.markdown("""
+        # 🔒 Área Restrita
+        ## Robô de Investimentos - Estratégia de Saída
+        
+        Digite a senha para acessar seu dashboard de investimentos.
+        """)
+        
+        st.text_input(
+            "Senha de Acesso",
+            type="password",
+            on_change=password_entered,
+            key="password",
+            help="Senha padrão local: investidor2026"
+        )
+        
+        st.info("💡 **Dica:** Configure sua senha personalizada em Settings > Secrets no Streamlit Cloud")
+        return False
+    
+    # Senha incorreta
+    elif not st.session_state["password_correct"]:
+        st.markdown("""
+        # 🔒 Área Restrita
+        ## Robô de Investimentos - Estratégia de Saída
+        """)
+        
+        st.text_input(
+            "Senha de Acesso",
+            type="password",
+            on_change=password_entered,
+            key="password"
+        )
+        st.error("❌ Senha incorreta. Tente novamente.")
+        return False
+    
+    # Senha correta
+    else:
+        return True
+
+# Verifica autenticação antes de mostrar o app
+if not check_password():
+    st.stop()
+
+# ============================================================================
+# APP PRINCIPAL (só executa se autenticado)
+# ============================================================================
+# SISTEMA DE AUTENTICAÇÃO
+# ============================================================================
+
+def check_password():
+    """Retorna True se o usuário está autenticado."""
+    
+    def password_entered():
+        """Verifica se a senha está correta."""
+        # Tenta pegar do secrets (Streamlit Cloud) ou usa padrão local
+        try:
+            correct_password = st.secrets["password"]
+        except:
+            # Senha padrão local: "investidor2026"
+            # Hash SHA256 de "investidor2026"
+            correct_password = "investidor2026"
+        
+        if st.session_state["password"] == correct_password:
+            st.session_state["password_correct"] = True
+            del st.session_state["password"]  # Remove senha da sessão
+        else:
+            st.session_state["password_correct"] = False
+
+    # Primeira execução, mostra tela de login
+    if "password_correct" not in st.session_state:
+        st.markdown("""
+        # 🔒 Área Restrita
+        ## Robô de Investimentos - Estratégia de Saída
+        
+        Digite a senha para acessar seu dashboard de investimentos.
+        """)
+        
+        st.text_input(
+            "Senha de Acesso",
+            type="password",
+            on_change=password_entered,
+            key="password",
+            help="Senha padrão local: investidor2026"
+        )
+        
+        st.info("💡 **Dica:** Configure sua senha personalizada em Settings > Secrets no Streamlit Cloud")
+        return False
+    
+    # Senha incorreta
+    elif not st.session_state["password_correct"]:
+        st.markdown("""
+        # 🔒 Área Restrita
+        ## Robô de Investimentos - Estratégia de Saída
+        """)
+        
+        st.text_input(
+            "Senha de Acesso",
+            type="password",
+            on_change=password_entered,
+            key="password"
+        )
+        st.error("❌ Senha incorreta. Tente novamente.")
+        return False
+    
+    # Senha correta
+    else:
+        return True
+
+# Verifica autenticação antes de mostrar o app
+if not check_password():
+    st.stop()
+
+# ============================================================================
+# APP PRINCIPAL (só executa se autenticado)
+# ============================================================================
 
 # Título e Cabeçalho
 st.title("🤖 Painel de Estratégia de Saída (2026)")

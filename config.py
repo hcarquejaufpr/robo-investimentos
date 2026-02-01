@@ -23,6 +23,6 @@ TESOURO_DIRETO = {'Tesouro Selic 2027': {'data_compra': '2024-02-15'}, 'Tesouro 
 # PARÂMETROS DE ANÁLISE TÉCNICA
 # ============================================================================
 PARAMETROS = {
-    'MULTIPLIER_US': 2.0,
-    'MULTIPLIER_BR': 1.5,
+    'MULTIPLIER_US': 1.2,   # Ações americanas (mais conservador para saída estratégica)
+    'MULTIPLIER_BR': 1.0,   # FIIs brasileiros (mais conservador)
 }
