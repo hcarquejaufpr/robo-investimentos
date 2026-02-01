@@ -721,10 +721,6 @@ with st.sidebar.expander("📊 Quantidade de Ativos (Opcional)", expanded=False)
         
         df_us_qty = pd.DataFrame(us_data)
         
-        # DEBUG
-        st.write("🐛 DEBUG - DataFrame US antes do editor:")
-        st.dataframe(df_us_qty)
-        
         # Data editor com Ticker bloqueado
         edited_us_df = st.data_editor(
             df_us_qty,
@@ -749,10 +745,6 @@ with st.sidebar.expander("📊 Quantidade de Ativos (Opcional)", expanded=False)
         
         # Armazena o DataFrame editado completo
         st.session_state["qty_us_df"] = edited_us_df
-        
-        # DEBUG
-        st.write("🐛 DEBUG - DataFrame editado:")
-        st.write(edited_us_df.to_dict('records'))
     
     # --- 🇧🇷 Quantidades Brasil ---
     with st.expander("🇧🇷 Quantidades Brasil", expanded=True):
@@ -788,10 +780,6 @@ with st.sidebar.expander("📊 Quantidade de Ativos (Opcional)", expanded=False)
         
         # Armazena o DataFrame editado completo
         st.session_state["qty_br_df"] = edited_br_df
-        
-        # DEBUG
-        st.write("🐛 DEBUG - DataFrame editado:")
-        st.write(edited_br_df.to_dict('records'))
 
 # --- Registrar Operação ---
 with st.sidebar.expander("📝 Registrar Operação (Compra/Venda)", expanded=False):
@@ -898,45 +886,26 @@ if st.sidebar.button("💾 Salvar Carteira", type="primary", help="Salva sua car
         # Processa quantidades de ativos - NOVA LÓGICA COM DATA_EDITOR
         new_asset_quantities = {}
         
-        # DEBUG - Verifica o que existe no session_state
-        st.sidebar.write("🐛 DEBUG - Keys no session_state:")
-        st.sidebar.write([k for k in st.session_state.keys() if 'qty' in k.lower()])
-        
         # Combina quantidades de US e BR dos data_editors
         if "qty_us_df" in st.session_state and st.session_state.qty_us_df is not None:
-            st.sidebar.write("🐛 DEBUG - Processando qty_us_df:")
-            st.sidebar.write(st.session_state.qty_us_df.to_dict('records'))
             try:
                 for _, row in st.session_state.qty_us_df.iterrows():
                     ticker = row["Ticker"]
                     qty = row["Quantidade"]
-                    st.sidebar.write(f"  - {ticker}: {qty} (tipo: {type(qty)})")
                     if pd.notna(qty) and qty > 0:
                         new_asset_quantities[ticker] = float(qty)
-                        st.sidebar.success(f"  ✅ {ticker} adicionado: {float(qty)}")
             except (KeyError, AttributeError, ValueError) as e:
                 st.sidebar.warning(f"⚠️ Erro ao processar quantidades US: {e}")
-        else:
-            st.sidebar.error("❌ qty_us_df NÃO encontrado no session_state")
         
         if "qty_br_df" in st.session_state and st.session_state.qty_br_df is not None:
-            st.sidebar.write("🐛 DEBUG - Processando qty_br_df:")
-            st.sidebar.write(st.session_state.qty_br_df.to_dict('records'))
             try:
                 for _, row in st.session_state.qty_br_df.iterrows():
                     ticker = row["Ticker"]
                     qty = row["Quantidade"]
-                    st.sidebar.write(f"  - {ticker}: {qty} (tipo: {type(qty)})")
                     if pd.notna(qty) and qty > 0:
                         new_asset_quantities[ticker] = float(qty)
-                        st.sidebar.success(f"  ✅ {ticker} adicionado: {float(qty)}")
             except (KeyError, AttributeError, ValueError) as e:
                 st.sidebar.warning(f"⚠️ Erro ao processar quantidades BR: {e}")
-        else:
-            st.sidebar.error("❌ qty_br_df NÃO encontrado no session_state")
-        
-        st.sidebar.write(f"🐛 DEBUG - Total de quantidades processadas: {len(new_asset_quantities)}")
-        st.sidebar.write(f"🐛 DEBUG - Dicionário final: {new_asset_quantities}")
         
         # Cria o objeto de carteira do usuário
         user_portfolio = {
@@ -956,16 +925,11 @@ if st.sidebar.button("💾 Salvar Carteira", type="primary", help="Salva sua car
         
         st.sidebar.success("✅ Sua carteira foi salva!")
         
-        # DEBUG: Mostra o que foi salvo
+        # Mostra o que foi salvo
         if new_asset_quantities:
-            st.sidebar.info(f"📊 Quantidades salvas: {len(new_asset_quantities)} ativos")
-            with st.sidebar.expander("🔍 Ver quantidades salvas", expanded=True):
-                for ticker, qty in new_asset_quantities.items():
-                    st.write(f"**{ticker}**: {qty}")
-        else:
-            st.sidebar.warning("⚠️ Nenhuma quantidade foi detectada para salvar")
+            st.sidebar.info(f"📊 {len(new_asset_quantities)} quantidade(s) salva(s)")
         
-        # st.rerun()  # TEMPORARIAMENTE DESABILITADO PARA VER LOGS
+        st.rerun()  # Recarrega para aplicar as novas quantidades
         
     except Exception as e:
         st.sidebar.error(f"❌ Erro ao salvar: {e}")
