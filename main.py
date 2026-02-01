@@ -5,12 +5,12 @@ from datetime import datetime
 from importlib import reload
 import ssl
 import hashlib
-import config  # Importa suas configurações do config.py
+import config
 import plotly.graph_objects as go
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-import database as db  # Importa módulo de banco de dados
+import database as db
 
 # Desabilita verificação SSL (necessário em algumas redes corporativas)
 ssl._create_default_https_context = ssl._create_unverified_context
