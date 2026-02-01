@@ -1467,6 +1467,117 @@ if US_STOCKS:
         )
         # Armazena no session_state para salvar depois
         st.session_state["edited_us"] = edited_df_us
+        
+        # === GRÁFICOS INDIVIDUAIS POR ATIVO ===
+        st.markdown("---")
+        st.subheader("📊 Gráficos Individuais - Análise Técnica")
+        
+        # Seletor de ativo para visualizar
+        ticker_para_grafico = st.selectbox(
+            "Selecione um ativo para ver o gráfico detalhado:",
+            options=df_us["Ticker"].tolist(),
+            key="grafico_us_selector"
+        )
+        
+        if ticker_para_grafico:
+            # Encontra os dados do ativo selecionado
+            ativo_data = df_us[df_us["Ticker"] == ticker_para_grafico].iloc[0]
+            
+            col_info1, col_info2, col_info3, col_info4 = st.columns(4)
+            with col_info1:
+                st.metric("Preço Atual", f"${ativo_data['Preço Atual']:.2f}")
+            with col_info2:
+                if ativo_data["Qtd"] != "-":
+                    st.metric("Quantidade", f"{ativo_data['Qtd']}")
+                else:
+                    st.metric("Quantidade", "Não cadastrada")
+            with col_info3:
+                if ativo_data["Realizado ($)"] != "-":
+                    valor_real = ativo_data["Realizado ($)"]
+                    st.metric("Realizado", f"${valor_real:.2f}", delta=f"{ativo_data['Realizado (%)']:.2f}%")
+                else:
+                    st.metric("Realizado", "N/A")
+            with col_info4:
+                if ativo_data["Valor Posição"] != "-":
+                    st.metric("Valor Posição", f"${ativo_data['Valor Posição']:.0f}")
+                else:
+                    st.metric("Valor Posição", "N/A")
+            
+            # Cria gráfico de candlestick com indicadores
+            historico = ativo_data["Histórico"]
+            
+            fig = go.Figure()
+            
+            # Linha de preço
+            fig.add_trace(go.Scatter(
+                x=historico.index,
+                y=historico.values,
+                mode='lines',
+                name='Preço',
+                line=dict(color='#2196F3', width=2)
+            ))
+            
+            # Linha de Stop Loss
+            fig.add_hline(
+                y=ativo_data["Stop Loss"],
+                line_dash="dash",
+                line_color="red",
+                annotation_text=f"🛑 Stop Loss: ${ativo_data['Stop Loss']:.2f}",
+                annotation_position="right"
+            )
+            
+            # Linha de Alvo
+            fig.add_hline(
+                y=ativo_data["Alvo (Gain)"],
+                line_dash="dash",
+                line_color="green",
+                annotation_text=f"🎯 Alvo: ${ativo_data['Alvo (Gain)']:.2f}",
+                annotation_position="right"
+            )
+            
+            # Linha de Preço de Entrada (se houver)
+            if ativo_data["Preço Entrada"] != "-" and ativo_data["Preço Entrada"] > 0:
+                fig.add_hline(
+                    y=ativo_data["Preço Entrada"],
+                    line_dash="dot",
+                    line_color="orange",
+                    annotation_text=f"📍 Entrada: ${ativo_data['Preço Entrada']:.2f}",
+                    annotation_position="left"
+                )
+            
+            fig.update_layout(
+                title=f"{ticker_para_grafico} - Histórico de 1 Ano",
+                xaxis_title="Data",
+                yaxis_title="Preço (USD)",
+                height=500,
+                hovermode='x unified',
+                showlegend=True
+            )
+            
+            st.plotly_chart(fig, use_container_width=True)
+            
+            # Informações adicionais
+            col_det1, col_det2 = st.columns(2)
+            with col_det1:
+                st.info(f"""
+                **📊 Indicadores Técnicos**
+                - **RSI:** {ativo_data['RSI (Termômetro)']}
+                - **Tendência:** {ativo_data['Tendência']}
+                - **Volatilidade (ATR):** {ativo_data['Volatilidade (ATR) %']:.2f}%
+                - **Multiplicador ATR:** {ativo_data['ATR Mult. ⚙️']}
+                """)
+            
+            with col_det2:
+                if ativo_data["Qtd"] != "-":
+                    st.success(f"""
+                    **💰 Projeções Financeiras**
+                    - **Ganho se atingir alvo:** ${ativo_data['Projeção Alvo ($)']:.2f} ({ativo_data['Potencial']})
+                    - **Perda se acionar stop:** ${ativo_data['Projeção Stop ($)']:.2f} ({ativo_data['Risco (%)']:.2f}%)
+                    - **Risco/Retorno:** {abs(ativo_data['Projeção Alvo ($)']/ativo_data['Projeção Stop ($)']):.2f}x
+                    """)
+                else:
+                    st.warning("**ℹ️ Cadastre a quantidade** para ver projeções financeiras")
+        
     else:
         st.warning("Nenhum dado disponível para ações americanas")
 else:
