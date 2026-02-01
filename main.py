@@ -575,7 +575,7 @@ def get_market_data(tickers, multiplier, individual_multipliers=None):
                 "RSI (Termômetro)": rsi_status,
                 "Stop Loss Sugerido": stop_price,
                 "Distância (%)": ((last_close - stop_price) / last_close) * 100,
-                "ATR Mult.": f"{current_multiplier}x",  # Mostra qual multiplicador foi usado
+                "ATR Mult.": current_multiplier,  # Valor numérico para edição
                 "Tendência": tendencia,
                 "Histórico": df['Close'] # Salva para o gráfico
             })
