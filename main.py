@@ -12,6 +12,9 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import database as db
 
+# Inicializa banco de dados
+db.init_database()
+
 # Desabilita verificação SSL (necessário em algumas redes corporativas)
 ssl._create_default_https_context = ssl._create_unverified_context
 
