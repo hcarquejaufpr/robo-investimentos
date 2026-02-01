@@ -732,9 +732,9 @@ with st.sidebar.expander("📊 Quantidade de Ativos (Opcional)", expanded=False)
                 "Quantidade": st.column_config.NumberColumn(
                     "Quantidade",
                     min_value=0,
-                    step=0.1,
-                    format="%.2f",
-                    help="Quantas ações/cotas você possui"
+                    step=0.0001,
+                    format="%.4f",
+                    help="Quantas ações/cotas você possui (4 casas decimais)"
                 )
             },
             hide_index=True,
