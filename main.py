@@ -850,37 +850,49 @@ if st.sidebar.button("💾 Salvar Carteira", type="primary", help="Salva sua car
                     st.sidebar.warning(f"⚠️ Linha ignorada (formato inválido): {line}")
         
         # Captura edições das tabelas (prioridade sobre text area)
-        if "edited_us" in st.session_state:
-            for _, row in st.session_state["edited_us"].iterrows():
-                ticker = row["Ticker"]
-                mult = row["ATR Mult."]
-                if pd.notna(mult) and mult > 0:
-                    new_individual_multipliers[ticker] = float(mult)
+        if "edited_us" in st.session_state and st.session_state["edited_us"] is not None:
+            try:
+                for _, row in st.session_state["edited_us"].iterrows():
+                    ticker = row["Ticker"]
+                    mult = row.get("ATR Mult.")
+                    if pd.notna(mult) and mult > 0:
+                        new_individual_multipliers[ticker] = float(mult)
+            except (KeyError, AttributeError) as e:
+                pass  # Tabela ainda não foi renderizada ou não tem ATR Mult.
         
-        if "edited_br" in st.session_state:
-            for _, row in st.session_state["edited_br"].iterrows():
-                ticker = row["Ticker"]
-                mult = row["ATR Mult."]
-                if pd.notna(mult) and mult > 0:
-                    new_individual_multipliers[ticker] = float(mult)
+        if "edited_br" in st.session_state and st.session_state["edited_br"] is not None:
+            try:
+                for _, row in st.session_state["edited_br"].iterrows():
+                    ticker = row["Ticker"]
+                    mult = row.get("ATR Mult.")
+                    if pd.notna(mult) and mult > 0:
+                        new_individual_multipliers[ticker] = float(mult)
+            except (KeyError, AttributeError) as e:
+                pass  # Tabela ainda não foi renderizada ou não tem ATR Mult.
         
         # Processa quantidades de ativos - NOVA LÓGICA COM DATA_EDITOR
         new_asset_quantities = {}
         
         # Combina quantidades de US e BR dos data_editors
-        if "qty_us_editor" in st.session_state:
-            for _, row in st.session_state.qty_us_editor.iterrows():
-                ticker = row["Ticker"]
-                qty = row["Quantidade"]
-                if pd.notna(qty) and qty > 0:
-                    new_asset_quantities[ticker] = float(qty)
+        if "qty_us_editor" in st.session_state and st.session_state.qty_us_editor is not None:
+            try:
+                for _, row in st.session_state.qty_us_editor.iterrows():
+                    ticker = row["Ticker"]
+                    qty = row["Quantidade"]
+                    if pd.notna(qty) and qty > 0:
+                        new_asset_quantities[ticker] = float(qty)
+            except (KeyError, AttributeError, ValueError) as e:
+                st.sidebar.warning(f"⚠️ Erro ao processar quantidades US: {e}")
         
-        if "qty_br_editor" in st.session_state:
-            for _, row in st.session_state.qty_br_editor.iterrows():
-                ticker = row["Ticker"]
-                qty = row["Quantidade"]
-                if pd.notna(qty) and qty > 0:
-                    new_asset_quantities[ticker] = float(qty)
+        if "qty_br_editor" in st.session_state and st.session_state.qty_br_editor is not None:
+            try:
+                for _, row in st.session_state.qty_br_editor.iterrows():
+                    ticker = row["Ticker"]
+                    qty = row["Quantidade"]
+                    if pd.notna(qty) and qty > 0:
+                        new_asset_quantities[ticker] = float(qty)
+            except (KeyError, AttributeError, ValueError) as e:
+                st.sidebar.warning(f"⚠️ Erro ao processar quantidades BR: {e}")
         
         # Cria o objeto de carteira do usuário
         user_portfolio = {
