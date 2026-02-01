@@ -928,7 +928,7 @@ def get_market_data(tickers, multiplier, individual_multipliers=None, asset_quan
             last_sma = float(df['SMA_20'].iloc[-1])
             last_rsi = float(df['RSI'].iloc[-1])
             
-            # Usa multiplicador individual se existir (PRIORIDADE: ajuste manual prevalece)
+            # Usa multiplicador individual se existir (PRIORIDADE: ajuste manual prevalece sobre sliders)
             ticker_clean = ticker.replace(".SA", "")
             has_manual_adjustment = ticker_clean in individual_multipliers
             current_multiplier = individual_multipliers.get(ticker_clean, multiplier)
@@ -939,12 +939,9 @@ def get_market_data(tickers, multiplier, individual_multipliers=None, asset_quan
             
             if last_rsi >= 70:
                 rsi_status = f"🔥 ALERTA: CARO ({last_rsi:.1f})"
-                # LÓGICA INTELIGENTE: RSI > 70 = Sobrecomprado → Stop 1.0x ATR
-                # MAS: Respeita ajuste manual se existir
-                if has_manual_adjustment:
-                    stop_multiplier = current_multiplier  # Mantém ajuste manual
-                else:
-                    stop_multiplier = 1.0  # Proteção automática em topos
+                # LÓGICA INTELIGENTE: RSI > 70 = Sobrecomprado → SEMPRE força Stop 1.0x ATR
+                # Proteção crítica prevalece sobre ajustes manuais (segurança em topos)
+                stop_multiplier = 1.0
             elif last_rsi <= 30:
                 rsi_status = f"❄️ Barato ({last_rsi:.1f})"
                 stop_multiplier = current_multiplier  # Usa o multiplicador configurado
