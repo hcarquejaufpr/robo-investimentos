@@ -207,6 +207,15 @@ def login_register_page():
             if submit:
                 users = load_users()
                 
+                # Debug temporário
+                st.write(f"🔍 DEBUG - Usuários carregados: {list(users.keys())}")
+                st.write(f"🔍 DEBUG - Username digitado: '{username}'")
+                st.write(f"🔍 DEBUG - Username existe?: {username in users}")
+                if username in users:
+                    st.write(f"🔍 DEBUG - Senha armazenada: '{users[username]['password']}'")
+                    st.write(f"🔍 DEBUG - Senha digitada: '{password}'")
+                    st.write(f"🔍 DEBUG - Senhas iguais?: {users[username]['password'] == password}")
+                
                 if username in users and users[username]["password"] == password:
                     st.session_state["authenticated"] = True
                     st.session_state["username"] = username
