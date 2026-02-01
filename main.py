@@ -726,7 +726,7 @@ with st.sidebar.expander("📊 Quantidade de Ativos (Opcional)", expanded=False)
         st.dataframe(df_us_qty)
         
         # Data editor com Ticker bloqueado
-        edited_us = st.data_editor(
+        edited_us_df = st.data_editor(
             df_us_qty,
             column_config={
                 "Ticker": st.column_config.TextColumn(
@@ -747,13 +747,12 @@ with st.sidebar.expander("📊 Quantidade de Ativos (Opcional)", expanded=False)
             key="qty_us_editor"
         )
         
-        # DEBUG - Mostra o que está no session_state
-        if "qty_us_editor" in st.session_state:
-            st.write("🐛 DEBUG - Session State após edição:")
-            try:
-                st.write(st.session_state.qty_us_editor.to_dict('records'))
-            except:
-                st.write(str(st.session_state.qty_us_editor))
+        # Armazena o DataFrame editado completo
+        st.session_state["qty_us_df"] = edited_us_df
+        
+        # DEBUG
+        st.write("🐛 DEBUG - DataFrame editado:")
+        st.write(edited_us_df.to_dict('records'))
     
     # --- 🇧🇷 Quantidades Brasil ---
     with st.expander("🇧🇷 Quantidades Brasil", expanded=True):
@@ -766,7 +765,7 @@ with st.sidebar.expander("📊 Quantidade de Ativos (Opcional)", expanded=False)
         df_br_qty = pd.DataFrame(br_data)
         
         # Data editor com Ticker bloqueado
-        edited_br = st.data_editor(
+        edited_br_df = st.data_editor(
             df_br_qty,
             column_config={
                 "Ticker": st.column_config.TextColumn(
@@ -786,6 +785,13 @@ with st.sidebar.expander("📊 Quantidade de Ativos (Opcional)", expanded=False)
             use_container_width=True,
             key="qty_br_editor"
         )
+        
+        # Armazena o DataFrame editado completo
+        st.session_state["qty_br_df"] = edited_br_df
+        
+        # DEBUG
+        st.write("🐛 DEBUG - DataFrame editado:")
+        st.write(edited_br_df.to_dict('records'))
 
 # --- Registrar Operação ---
 with st.sidebar.expander("📝 Registrar Operação (Compra/Venda)", expanded=False):
@@ -897,14 +903,11 @@ if st.sidebar.button("💾 Salvar Carteira", type="primary", help="Salva sua car
         st.sidebar.write([k for k in st.session_state.keys() if 'qty' in k.lower()])
         
         # Combina quantidades de US e BR dos data_editors
-        if "qty_us_editor" in st.session_state and st.session_state.qty_us_editor is not None:
-            st.sidebar.write("🐛 DEBUG - Processando qty_us_editor:")
+        if "qty_us_df" in st.session_state and st.session_state.qty_us_df is not None:
+            st.sidebar.write("🐛 DEBUG - Processando qty_us_df:")
+            st.sidebar.write(st.session_state.qty_us_df.to_dict('records'))
             try:
-                st.sidebar.write(st.session_state.qty_us_editor.to_dict('records'))
-            except:
-                st.sidebar.write(str(st.session_state.qty_us_editor))
-            try:
-                for _, row in st.session_state.qty_us_editor.iterrows():
+                for _, row in st.session_state.qty_us_df.iterrows():
                     ticker = row["Ticker"]
                     qty = row["Quantidade"]
                     st.sidebar.write(f"  - {ticker}: {qty} (tipo: {type(qty)})")
@@ -914,16 +917,13 @@ if st.sidebar.button("💾 Salvar Carteira", type="primary", help="Salva sua car
             except (KeyError, AttributeError, ValueError) as e:
                 st.sidebar.warning(f"⚠️ Erro ao processar quantidades US: {e}")
         else:
-            st.sidebar.error("❌ qty_us_editor NÃO encontrado no session_state")
+            st.sidebar.error("❌ qty_us_df NÃO encontrado no session_state")
         
-        if "qty_br_editor" in st.session_state and st.session_state.qty_br_editor is not None:
-            st.sidebar.write("🐛 DEBUG - Processando qty_br_editor:")
+        if "qty_br_df" in st.session_state and st.session_state.qty_br_df is not None:
+            st.sidebar.write("🐛 DEBUG - Processando qty_br_df:")
+            st.sidebar.write(st.session_state.qty_br_df.to_dict('records'))
             try:
-                st.sidebar.write(st.session_state.qty_br_editor.to_dict('records'))
-            except:
-                st.sidebar.write(str(st.session_state.qty_br_editor))
-            try:
-                for _, row in st.session_state.qty_br_editor.iterrows():
+                for _, row in st.session_state.qty_br_df.iterrows():
                     ticker = row["Ticker"]
                     qty = row["Quantidade"]
                     st.sidebar.write(f"  - {ticker}: {qty} (tipo: {type(qty)})")
@@ -933,7 +933,7 @@ if st.sidebar.button("💾 Salvar Carteira", type="primary", help="Salva sua car
             except (KeyError, AttributeError, ValueError) as e:
                 st.sidebar.warning(f"⚠️ Erro ao processar quantidades BR: {e}")
         else:
-            st.sidebar.error("❌ qty_br_editor NÃO encontrado no session_state")
+            st.sidebar.error("❌ qty_br_df NÃO encontrado no session_state")
         
         st.sidebar.write(f"🐛 DEBUG - Total de quantidades processadas: {len(new_asset_quantities)}")
         st.sidebar.write(f"🐛 DEBUG - Dicionário final: {new_asset_quantities}")
