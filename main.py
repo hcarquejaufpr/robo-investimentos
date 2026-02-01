@@ -852,11 +852,45 @@ with st.sidebar.expander("📝 Registrar Operação (Compra/Venda)", expanded=Fa
             
             OPERATIONS_HISTORY.append(new_operation)
             
-            # Atualiza quantidade automaticamente
+            # Atualiza quantidade e preço de entrada
             if op_type == "COMPRA":
-                ASSET_QUANTITIES[op_ticker] = ASSET_QUANTITIES.get(op_ticker, 0) + op_quantity
+                # Calcula preço médio de compra
+                current_info = ASSET_QUANTITIES.get(op_ticker, {"quantidade": 0, "preco_entrada": 0})
+                if isinstance(current_info, (int, float)):
+                    # Converte formato antigo para novo
+                    current_qty = current_info
+                    current_price = 0
+                else:
+                    current_qty = current_info.get("quantidade", 0)
+                    current_price = current_info.get("preco_entrada", 0)
+                
+                new_qty = current_qty + op_quantity
+                
+                # Calcula preço médio ponderado
+                if current_qty > 0 and current_price > 0:
+                    avg_price = ((current_qty * current_price) + (op_quantity * op_price)) / new_qty
+                else:
+                    avg_price = op_price
+                
+                ASSET_QUANTITIES[op_ticker] = {
+                    "quantidade": new_qty,
+                    "preco_entrada": avg_price
+                }
             else:  # VENDA
-                ASSET_QUANTITIES[op_ticker] = max(0, ASSET_QUANTITIES.get(op_ticker, 0) - op_quantity)
+                current_info = ASSET_QUANTITIES.get(op_ticker, {"quantidade": 0, "preco_entrada": 0})
+                if isinstance(current_info, (int, float)):
+                    current_qty = current_info
+                    current_price = 0
+                else:
+                    current_qty = current_info.get("quantidade", 0)
+                    current_price = current_info.get("preco_entrada", 0)
+                
+                new_qty = max(0, current_qty - op_quantity)
+                
+                ASSET_QUANTITIES[op_ticker] = {
+                    "quantidade": new_qty,
+                    "preco_entrada": current_price  # Mantém preço médio
+                }
             
             # Salva imediatamente
             user_portfolio["OPERATIONS_HISTORY"] = OPERATIONS_HISTORY
