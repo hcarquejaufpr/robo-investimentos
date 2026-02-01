@@ -714,7 +714,7 @@ with st.sidebar.expander("📊 Quantidade de Ativos (Opcional)", expanded=False)
     with st.expander("🇺🇸 Quantidades EUA", expanded=True):
         # Prepara DataFrame pré-preenchido com tickers US
         us_data = []
-        for ticker in new_us_stocks:
+        for ticker in US_STOCKS:
             qty = ASSET_QUANTITIES.get(ticker, 0)
             us_data.append({"Ticker": ticker, "Quantidade": qty})
         
@@ -748,7 +748,7 @@ with st.sidebar.expander("📊 Quantidade de Ativos (Opcional)", expanded=False)
     with st.expander("🇧🇷 Quantidades Brasil", expanded=True):
         # Prepara DataFrame pré-preenchido com tickers BR
         br_data = []
-        for ticker in new_br_fiis:
+        for ticker in BR_FIIS:
             qty = ASSET_QUANTITIES.get(ticker, 0)
             br_data.append({"Ticker": ticker, "Quantidade": qty})
         
