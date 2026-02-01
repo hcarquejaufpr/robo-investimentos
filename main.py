@@ -1105,6 +1105,11 @@ st.subheader("🇺🇸 Renda Variável EUA (Ações e ETFs)")
 st.caption("💡 **Dica:** RSI > 70 ativa stop 1.0x ATR automaticamente (salvo ajuste manual). Clique duplo em 'ATR Mult.' para personalizar.")
 if US_STOCKS:
     st.caption(f"📊 Analisando {len(US_STOCKS)} ticker(s): {', '.join(US_STOCKS)}")
+    
+    # DEBUG: Mostra os tickers carregados
+    with st.expander("🔍 Debug: Tickers Carregados", expanded=False):
+        st.json({"US_STOCKS": US_STOCKS, "Total": len(US_STOCKS)})
+    
     df_us = get_market_data(US_STOCKS, mult_us, individual_multipliers=INDIVIDUAL_MULTIPLIERS, asset_quantities=ASSET_QUANTITIES)
     if not df_us.empty:
         # Define quais colunas mostrar (depende se tem quantidades cadastradas)
