@@ -1330,8 +1330,8 @@ if US_STOCKS:
         if has_quantities:
             display_columns = ["Ticker", "Qtd", "Preço Entrada", "Preço Atual", "Realizado ($)", "Realizado (%)", 
                              "Valor Posição", "Volatilidade (ATR) %", "RSI (Termômetro)", 
-                             "Stop Loss", "Alvo (Gain)", "Projeção Alvo ($)", "Projeção Stop ($)", 
-                             "Potencial", "Risco (%)", "Tendência", "ATR Mult. ⚙️"]
+                             "Stop Loss", "Alvo (Gain)", "Potencial", "Risco (%)", 
+                             "Tendência", "ATR Mult. ⚙️"]
         else:
             display_columns = ["Ticker", "Preço Atual", "Volatilidade (ATR) %", "RSI (Termômetro)", 
                              "Stop Loss", "Alvo (Gain)", "Potencial", "Risco (%)", 
@@ -1358,19 +1358,19 @@ if US_STOCKS:
                 "Realizado ($)": st.column_config.NumberColumn(
                     "Realizado ($)",
                     format="$%.2f",
-                    help="Ganho/Perda real desde a entrada",
+                    help="💰 Quanto você ganhou/perdeu desde que cadastrou. Cálculo: (Preço Atual - Preço Entrada) × Quantidade",
                     disabled=True
                 ),
                 "Realizado (%)": st.column_config.NumberColumn(
                     "Realizado (%)",
                     format="%.2f%%",
-                    help="Percentual de ganho/perda desde a entrada",
+                    help="📊 Percentual de ganho/perda desde que cadastrou. Cálculo: [(Preço Atual - Preço Entrada) / Preço Entrada] × 100",
                     disabled=True
                 ),
                 "Valor Posição": st.column_config.NumberColumn(
                     "Valor Posição",
                     format="$%.0f",
-                    help="Valor total investido neste ativo (Quantidade × Preço Atual)",
+                    help="📈 Valor total que você tem investido HOJE neste ativo. Cálculo: Preço Atual × Quantidade",
                     disabled=True
                 ),
                 "ATR %": st.column_config.NumberColumn(
@@ -1448,8 +1448,8 @@ if BR_FIIS:
         if has_quantities_br:
             display_columns_br = ["Ticker", "Qtd", "Preço Entrada", "Preço Atual", "Realizado ($)", "Realizado (%)", 
                                  "Valor Posição", "Volatilidade (ATR) %", "RSI (Termômetro)", 
-                                 "Stop Loss", "Alvo (Gain)", "Projeção Alvo ($)", "Projeção Stop ($)", 
-                                 "Potencial", "Risco (%)", "Tendência", "ATR Mult. ⚙️"]
+                                 "Stop Loss", "Alvo (Gain)", "Potencial", "Risco (%)", 
+                                 "Tendência", "ATR Mult. ⚙️"]
         else:
             display_columns_br = ["Ticker", "Preço Atual", "Volatilidade (ATR) %", "RSI (Termômetro)", 
                                  "Stop Loss", "Alvo (Gain)", "Potencial", "Risco (%)", 
