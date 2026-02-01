@@ -702,29 +702,81 @@ with st.sidebar.expander("📊 Quantidade de Ativos (Opcional)", expanded=False)
     - 💰 Valor total da posição
     - 🎯 Ganho potencial em $ (se atingir alvos)
     - 🛑 Perda potencial em $ (se acionar stops)
-    
-    Formato: `TICKER: quantidade`
-    
-    Exemplos:
-    ```
-    AAPL: 100
-    NVDA: 50
-    HGLG11: 200
-    ```
     """)
     
-    # Converte dicionário em texto editável
-    quantity_lines = []
-    for ticker, qty in ASSET_QUANTITIES.items():
-        quantity_lines.append(f"{ticker}: {qty}")
+    # Inicializa session_state para quantidades se não existir
+    if "quantities_us" not in st.session_state:
+        st.session_state.quantities_us = None
+    if "quantities_br" not in st.session_state:
+        st.session_state.quantities_br = None
     
-    quantity_text = st.text_area(
-        "Quantidades por ticker",
-        value="\n".join(quantity_lines),
-        height=150,
-        key="asset_quantities",
-        help="Deixe em branco se não quiser ver cálculos financeiros. Útil para análise de portfólio."
-    )
+    # --- 🇺🇸 Quantidades EUA ---
+    with st.expander("🇺🇸 Quantidades EUA", expanded=True):
+        # Prepara DataFrame pré-preenchido com tickers US
+        us_data = []
+        for ticker in new_us_stocks:
+            qty = ASSET_QUANTITIES.get(ticker, 0)
+            us_data.append({"Ticker": ticker, "Quantidade": qty})
+        
+        df_us_qty = pd.DataFrame(us_data)
+        
+        # Data editor com Ticker bloqueado
+        edited_us = st.data_editor(
+            df_us_qty,
+            column_config={
+                "Ticker": st.column_config.TextColumn(
+                    "Ticker",
+                    disabled=True,
+                    help="Ticker da ação/ETF"
+                ),
+                "Quantidade": st.column_config.NumberColumn(
+                    "Quantidade",
+                    min_value=0,
+                    step=0.1,
+                    format="%.2f",
+                    help="Quantas ações/cotas você possui"
+                )
+            },
+            hide_index=True,
+            use_container_width=True,
+            key="qty_us_editor"
+        )
+        
+        st.session_state.quantities_us = edited_us
+    
+    # --- 🇧🇷 Quantidades Brasil ---
+    with st.expander("🇧🇷 Quantidades Brasil", expanded=True):
+        # Prepara DataFrame pré-preenchido com tickers BR
+        br_data = []
+        for ticker in new_br_fiis:
+            qty = ASSET_QUANTITIES.get(ticker, 0)
+            br_data.append({"Ticker": ticker, "Quantidade": qty})
+        
+        df_br_qty = pd.DataFrame(br_data)
+        
+        # Data editor com Ticker bloqueado
+        edited_br = st.data_editor(
+            df_br_qty,
+            column_config={
+                "Ticker": st.column_config.TextColumn(
+                    "Ticker",
+                    disabled=True,
+                    help="Ticker do FII/ação"
+                ),
+                "Quantidade": st.column_config.NumberColumn(
+                    "Quantidade",
+                    min_value=0,
+                    step=0.1,
+                    format="%.2f",
+                    help="Quantas cotas você possui"
+                )
+            },
+            hide_index=True,
+            use_container_width=True,
+            key="qty_br_editor"
+        )
+        
+        st.session_state.quantities_br = edited_br
 
 # --- Registrar Operação ---
 with st.sidebar.expander("📝 Registrar Operação (Compra/Venda)", expanded=False):
@@ -822,19 +874,23 @@ if st.sidebar.button("💾 Salvar Configurações", type="primary", help="Salva 
                 if pd.notna(mult) and mult > 0:
                     new_individual_multipliers[ticker] = float(mult)
         
-        # Processa quantidades de ativos
+        # Processa quantidades de ativos - NOVA LÓGICA COM DATA_EDITOR
         new_asset_quantities = {}
-        for line in quantity_text.split('\n'):
-            line = line.strip()
-            if ':' in line:
-                try:
-                    ticker, qty = line.split(':', 1)
-                    ticker = ticker.strip().upper()
-                    qty = int(qty.strip())
-                    if qty > 0:  # Valida quantidade positiva
-                        new_asset_quantities[ticker] = qty
-                except ValueError:
-                    st.sidebar.warning(f"⚠️ Linha ignorada (formato inválido): {line}")
+        
+        # Combina quantidades de US e BR dos data_editors
+        if st.session_state.quantities_us is not None:
+            for _, row in st.session_state.quantities_us.iterrows():
+                ticker = row["Ticker"]
+                qty = row["Quantidade"]
+                if pd.notna(qty) and qty > 0:
+                    new_asset_quantities[ticker] = float(qty)
+        
+        if st.session_state.quantities_br is not None:
+            for _, row in st.session_state.quantities_br.iterrows():
+                ticker = row["Ticker"]
+                qty = row["Quantidade"]
+                if pd.notna(qty) and qty > 0:
+                    new_asset_quantities[ticker] = float(qty)
         
         # Cria o objeto de carteira do usuário
         user_portfolio = {
