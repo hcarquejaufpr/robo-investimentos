@@ -750,7 +750,10 @@ with st.sidebar.expander("📊 Quantidade de Ativos (Opcional)", expanded=False)
         # DEBUG - Mostra o que está no session_state
         if "qty_us_editor" in st.session_state:
             st.write("🐛 DEBUG - Session State após edição:")
-            st.dataframe(st.session_state.qty_us_editor)
+            try:
+                st.write(st.session_state.qty_us_editor.to_dict('records'))
+            except:
+                st.write(str(st.session_state.qty_us_editor))
     
     # --- 🇧🇷 Quantidades Brasil ---
     with st.expander("🇧🇷 Quantidades Brasil", expanded=True):
@@ -896,7 +899,10 @@ if st.sidebar.button("💾 Salvar Carteira", type="primary", help="Salva sua car
         # Combina quantidades de US e BR dos data_editors
         if "qty_us_editor" in st.session_state and st.session_state.qty_us_editor is not None:
             st.sidebar.write("🐛 DEBUG - Processando qty_us_editor:")
-            st.sidebar.dataframe(st.session_state.qty_us_editor)
+            try:
+                st.sidebar.write(st.session_state.qty_us_editor.to_dict('records'))
+            except:
+                st.sidebar.write(str(st.session_state.qty_us_editor))
             try:
                 for _, row in st.session_state.qty_us_editor.iterrows():
                     ticker = row["Ticker"]
@@ -912,7 +918,10 @@ if st.sidebar.button("💾 Salvar Carteira", type="primary", help="Salva sua car
         
         if "qty_br_editor" in st.session_state and st.session_state.qty_br_editor is not None:
             st.sidebar.write("🐛 DEBUG - Processando qty_br_editor:")
-            st.sidebar.dataframe(st.session_state.qty_br_editor)
+            try:
+                st.sidebar.write(st.session_state.qty_br_editor.to_dict('records'))
+            except:
+                st.sidebar.write(str(st.session_state.qty_br_editor))
             try:
                 for _, row in st.session_state.qty_br_editor.iterrows():
                     ticker = row["Ticker"]
@@ -950,13 +959,13 @@ if st.sidebar.button("💾 Salvar Carteira", type="primary", help="Salva sua car
         # DEBUG: Mostra o que foi salvo
         if new_asset_quantities:
             st.sidebar.info(f"📊 Quantidades salvas: {len(new_asset_quantities)} ativos")
-            with st.sidebar.expander("🔍 Ver quantidades salvas", expanded=False):
+            with st.sidebar.expander("🔍 Ver quantidades salvas", expanded=True):
                 for ticker, qty in new_asset_quantities.items():
                     st.write(f"**{ticker}**: {qty}")
         else:
             st.sidebar.warning("⚠️ Nenhuma quantidade foi detectada para salvar")
         
-        st.rerun()  # Recarrega a página para aplicar as novas quantidades
+        # st.rerun()  # TEMPORARIAMENTE DESABILITADO PARA VER LOGS
         
     except Exception as e:
         st.sidebar.error(f"❌ Erro ao salvar: {e}")
