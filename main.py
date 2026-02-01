@@ -548,22 +548,37 @@ def get_market_data(tickers, multiplier, individual_multipliers=None):
             ticker_clean = ticker.replace(".SA", "")
             current_multiplier = individual_multipliers.get(ticker_clean, multiplier)
             
-            # Preço de Stop (Gatilho de Venda)
-            stop_price = last_close - (last_atr * current_multiplier)
-            
-            # Tendência baseada na SMA
-            tendencia = "🟢 Alta" if last_close > last_sma else "🔴 Baixa"
-            
             # ================================================================
             # RSI TERMÔMETRO (Visual de Sobrecompra/Sobrevenda)
             # ================================================================
             
             if last_rsi >= 70:
                 rsi_status = f"🔥 ALERTA: CARO ({last_rsi:.1f})"
+                # LÓGICA INTELIGENTE: RSI > 70 = Sobrecomprado → Stop mais apertado automaticamente
+                stop_multiplier = 1.0  # Proteção agressiva em topos
             elif last_rsi <= 30:
                 rsi_status = f"❄️ Barato ({last_rsi:.1f})"
+                stop_multiplier = current_multiplier  # Usa o multiplicador normal
             else:
                 rsi_status = f"Neutro ({last_rsi:.1f})"
+                stop_multiplier = current_multiplier  # Usa o multiplicador normal
+            
+            # ================================================================
+            # CÁLCULO DE PREÇOS ESTRATÉGICOS
+            # ================================================================
+            
+            # Stop Loss (Gatilho de Venda para limitar perdas)
+            stop_price = last_close - (last_atr * stop_multiplier)
+            
+            # Take Profit / Alvo de Lucro (Projeção de alta baseada em volatilidade)
+            # Usa 2.0x ATR para capturar movimentos significativos de alta
+            gain_target = last_close + (last_atr * 2.0)
+            
+            # Potencial de Ganho até o alvo
+            gain_potential = ((gain_target - last_close) / last_close) * 100
+            
+            # Tendência baseada na SMA
+            tendencia = "🟢 Alta" if last_close > last_sma else "🔴 Baixa"
             
             # ================================================================
             # ADICIONA AO RESULTADO
@@ -574,8 +589,10 @@ def get_market_data(tickers, multiplier, individual_multipliers=None):
                 "Preço Atual": last_close,
                 "RSI (Termômetro)": rsi_status,
                 "Stop Loss Sugerido": stop_price,
-                "Distância (%)": ((last_close - stop_price) / last_close) * 100,
-                "ATR Mult.": current_multiplier,  # Valor numérico para edição
+                "Alvo (Gain)": gain_target,
+                "Potencial (%)": gain_potential,
+                "Distância Stop (%)": ((last_close - stop_price) / last_close) * 100,
+                "ATR Mult.": current_multiplier,
                 "Tendência": tendencia,
                 "Histórico": df['Close'] # Salva para o gráfico
             })
@@ -639,36 +656,43 @@ st.header("📊 Renda Variável: Ações e FIIs")
 # Explicação dos indicadores
 with st.expander("❓ Como interpretar a tabela", expanded=False):
     st.markdown("""
-    ### 📖 Guia de Leitura da Análise
+    ### 📖 Guia de Leitura da Análise Completa
     
     **🎯 Preço Atual:** Último preço de fechamento do ativo
     
     **🌡️ RSI (Termômetro):**
-    - 🔥 **ALERTA: CARO (≥70)** → Ativo em sobrecompra, possível topo. Evite comprar, considere vender.
+    - 🔥 **ALERTA: CARO (≥70)** → Ativo em sobrecompra, possível topo. **AUTOMÁTICO:** Stop ajustado para 1.0x ATR (proteção de lucro).
     - ❄️ **Barato (≤30)** → Ativo em sobrevenda, possível fundo. Oportunidade de compra (se tendência favorável).
     - **Neutro (31-69)** → Zona normal, sem extremos.
     
-    **🛡️ Stop Loss Sugerido:** Preço calculado usando ATR (volatilidade). Se o ativo cair abaixo desse preço, é sinal de venda automática.
+    **🛑 Stop Loss:** Preço de venda automática para limitar perdas (calculado com ATR × multiplicador). 
+    - RSI > 70? Sistema ajusta para 1.0x ATR automaticamente (proteção agressiva em topos).
     
-    **📏 Distância (%):** Percentual entre o preço atual e o stop. Quanto maior, mais "espaço" para o ativo cair antes de acionar o stop.
+    **🎯 Alvo (Gain):** Meta de lucro projetada (Preço + 2.0x ATR). Baseado na volatilidade normal do ativo.
+    
+    **📈 Potencial (%):** Ganho percentual esperado se atingir o alvo. Compare com "Risco (%)" para avaliar relação risco/retorno.
+    
+    **⚠️ Risco (%):** Distância percentual até o stop loss (quanto pode cair antes de acionar a venda).
     
     **📈 Tendência:** 
     - 🟢 **Alta** → Preço acima da média móvel (SMA 20). Movimento ascendente.
     - 🔴 **Baixa** → Preço abaixo da média móvel. Movimento descendente.
+    
+    **⚙️ ATR Mult.:** Multiplicador editável. Clique duplo para personalizar o stop de cada ativo individualmente.
     """)
 
 col1, col2 = st.columns(2)
 
 with col1:
     st.subheader("🇺🇸 Ações Americanas")
-    st.caption("💡 **Dica:** Edite a coluna 'ATR Mult.' para ajustar o stop de cada ativo individualmente")
+    st.caption("💡 **Dica:** RSI > 70 ativa stop automático em 1.0x ATR (proteção de lucro). Edite 'ATR Mult.' para personalizar.")
     if US_STOCKS:
         st.caption(f"📊 Analisando {len(US_STOCKS)} ticker(s): {', '.join(US_STOCKS)}")
         df_us = get_market_data(US_STOCKS, mult_us, individual_multipliers=INDIVIDUAL_MULTIPLIERS)
         if not df_us.empty:
             # Configura colunas editáveis
             edited_df_us = st.data_editor(
-                df_us[["Ticker", "Preço Atual", "RSI (Termômetro)", "Stop Loss Sugerido", "Distância (%)", "Tendência", "ATR Mult."]],
+                df_us[["Ticker", "Preço Atual", "RSI (Termômetro)", "Stop Loss Sugerido", "Alvo (Gain)", "Potencial (%)", "Distância Stop (%)", "Tendência", "ATR Mult."]],
                 use_container_width=True,
                 column_config={
                     "Ticker": st.column_config.TextColumn("Ticker", disabled=True),
@@ -679,18 +703,32 @@ with col1:
                     ),
                     "RSI (Termômetro)": st.column_config.TextColumn("RSI (Termômetro)", disabled=True),
                     "Stop Loss Sugerido": st.column_config.NumberColumn(
-                        "Stop Loss Sugerido",
+                        "Stop Loss 🛑",
                         format="$%.1f",
+                        help="Preço de venda automática para limitar perdas. RSI > 70 ajusta para 1.0x ATR.",
                         disabled=True
                     ),
-                    "Distância (%)": st.column_config.NumberColumn(
-                        "Distância (%)",
+                    "Alvo (Gain)": st.column_config.NumberColumn(
+                        "Alvo (Gain) 🎯",
+                        format="$%.1f",
+                        help="Preço alvo de lucro (2.0x ATR acima do preço atual). Meta de venda estratégica.",
+                        disabled=True
+                    ),
+                    "Potencial (%)": st.column_config.NumberColumn(
+                        "Potencial 📈",
                         format="%.1f%%",
+                        help="Ganho percentual se atingir o alvo projetado.",
+                        disabled=True
+                    ),
+                    "Distância Stop (%)": st.column_config.NumberColumn(
+                        "Risco (%)",
+                        format="%.1f%%",
+                        help="Distância percentual até o stop loss (quanto pode cair antes de vender).",
                         disabled=True
                     ),
                     "Tendência": st.column_config.TextColumn("Tendência", disabled=True),
                     "ATR Mult.": st.column_config.NumberColumn(
-                        "ATR Mult. 🎯",
+                        "ATR Mult. ⚙️",
                         help="Multiplicador do ATR para calcular o stop loss. Clique duplo para editar!",
                         min_value=0.1,
                         max_value=5.0,
@@ -712,14 +750,14 @@ with col1:
 
 with col2:
     st.subheader("🇧🇷 FIIs Brasileiros")
-    st.caption("💡 **Dica:** Edite a coluna 'ATR Mult.' para ajustar o stop de cada ativo individualmente")
+    st.caption("💡 **Dica:** RSI > 70 ativa stop automático em 1.0x ATR (proteção de lucro). Edite 'ATR Mult.' para personalizar.")
     if BR_FIIS:
         st.caption(f"📊 Analisando {len(BR_FIIS)} ticker(s): {', '.join(BR_FIIS)}")
         df_br = get_market_data(BR_FIIS, mult_br, individual_multipliers=INDIVIDUAL_MULTIPLIERS)
         if not df_br.empty:
             # Configura colunas editáveis
             edited_df_br = st.data_editor(
-                df_br[["Ticker", "Preço Atual", "RSI (Termômetro)", "Stop Loss Sugerido", "Distância (%)", "Tendência", "ATR Mult."]],
+                df_br[["Ticker", "Preço Atual", "RSI (Termômetro)", "Stop Loss Sugerido", "Alvo (Gain)", "Potencial (%)", "Distância Stop (%)", "Tendência", "ATR Mult."]],
                 use_container_width=True,
                 column_config={
                     "Ticker": st.column_config.TextColumn("Ticker", disabled=True),
@@ -730,18 +768,32 @@ with col2:
                     ),
                     "RSI (Termômetro)": st.column_config.TextColumn("RSI (Termômetro)", disabled=True),
                     "Stop Loss Sugerido": st.column_config.NumberColumn(
-                        "Stop Loss Sugerido",
+                        "Stop Loss 🛑",
                         format="R$ %.1f",
+                        help="Preço de venda automática para limitar perdas. RSI > 70 ajusta para 1.0x ATR.",
                         disabled=True
                     ),
-                    "Distância (%)": st.column_config.NumberColumn(
-                        "Distância (%)",
+                    "Alvo (Gain)": st.column_config.NumberColumn(
+                        "Alvo (Gain) 🎯",
+                        format="R$ %.1f",
+                        help="Preço alvo de lucro (2.0x ATR acima do preço atual). Meta de venda estratégica.",
+                        disabled=True
+                    ),
+                    "Potencial (%)": st.column_config.NumberColumn(
+                        "Potencial 📈",
                         format="%.1f%%",
+                        help="Ganho percentual se atingir o alvo projetado.",
+                        disabled=True
+                    ),
+                    "Distância Stop (%)": st.column_config.NumberColumn(
+                        "Risco (%)",
+                        format="%.1f%%",
+                        help="Distância percentual até o stop loss (quanto pode cair antes de vender).",
                         disabled=True
                     ),
                     "Tendência": st.column_config.TextColumn("Tendência", disabled=True),
                     "ATR Mult.": st.column_config.NumberColumn(
-                        "ATR Mult. 🎯",
+                        "ATR Mult. ⚙️",
                         help="Multiplicador do ATR para calcular o stop loss. Clique duplo para editar!",
                         min_value=0.1,
                         max_value=5.0,
