@@ -1297,6 +1297,9 @@ if US_STOCKS:
     df_us = get_market_data(US_STOCKS, mult_us, individual_multipliers=INDIVIDUAL_MULTIPLIERS, asset_quantities=ASSET_QUANTITIES)
     
     if not df_us.empty:
+        # DEBUG: Mostra colunas disponíveis
+        st.write("🐛 Colunas disponíveis no DataFrame:", df_us.columns.tolist())
+        
         # DEBUG COMPLETO: Mostra cálculos detalhados
         with st.expander("🐛 DEBUG COMPLETO: Cálculos RSI e Stop Loss", expanded=True):
             st.warning("**Esta seção mostra os cálculos internos para debug**")
