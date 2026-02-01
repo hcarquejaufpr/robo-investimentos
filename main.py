@@ -681,137 +681,137 @@ with st.expander("❓ Como interpretar a tabela", expanded=False):
     **⚙️ ATR Mult.:** Multiplicador editável. Clique duplo para personalizar o stop de cada ativo individualmente.
     """)
 
-col1, col2 = st.columns(2)
-
-with col1:
-    st.subheader("🇺🇸 Ações Americanas")
-    st.caption("💡 **Dica:** RSI > 70 ativa stop automático em 1.0x ATR (proteção de lucro). Edite 'ATR Mult.' para personalizar.")
-    if US_STOCKS:
-        st.caption(f"📊 Analisando {len(US_STOCKS)} ticker(s): {', '.join(US_STOCKS)}")
-        df_us = get_market_data(US_STOCKS, mult_us, individual_multipliers=INDIVIDUAL_MULTIPLIERS)
-        if not df_us.empty:
-            # Configura colunas editáveis
-            edited_df_us = st.data_editor(
-                df_us[["Ticker", "Preço Atual", "RSI (Termômetro)", "Stop Loss Sugerido", "Alvo (Gain)", "Potencial (%)", "Distância Stop (%)", "Tendência", "ATR Mult."]],
-                use_container_width=True,
-                column_config={
-                    "Ticker": st.column_config.TextColumn("Ticker", disabled=True),
-                    "Preço Atual": st.column_config.NumberColumn(
-                        "Preço Atual",
-                        format="$%.1f",
-                        disabled=True
-                    ),
-                    "RSI (Termômetro)": st.column_config.TextColumn("RSI (Termômetro)", disabled=True),
-                    "Stop Loss Sugerido": st.column_config.NumberColumn(
-                        "Stop Loss 🛑",
-                        format="$%.1f",
-                        help="Preço de venda automática para limitar perdas. RSI > 70 ajusta para 1.0x ATR.",
-                        disabled=True
-                    ),
-                    "Alvo (Gain)": st.column_config.NumberColumn(
-                        "Alvo (Gain) 🎯",
-                        format="$%.1f",
-                        help="Preço alvo de lucro (2.0x ATR acima do preço atual). Meta de venda estratégica.",
-                        disabled=True
-                    ),
-                    "Potencial (%)": st.column_config.NumberColumn(
-                        "Potencial 📈",
-                        format="%.1f%%",
-                        help="Ganho percentual se atingir o alvo projetado.",
-                        disabled=True
-                    ),
-                    "Distância Stop (%)": st.column_config.NumberColumn(
-                        "Risco (%)",
-                        format="%.1f%%",
-                        help="Distância percentual até o stop loss (quanto pode cair antes de vender).",
-                        disabled=True
-                    ),
-                    "Tendência": st.column_config.TextColumn("Tendência", disabled=True),
-                    "ATR Mult.": st.column_config.NumberColumn(
-                        "ATR Mult. ⚙️",
-                        help="Multiplicador do ATR para calcular o stop loss. Clique duplo para editar!",
-                        min_value=0.1,
-                        max_value=5.0,
-                        step=0.1,
-                        format="%.1fx",
-                        required=True,
-                    ),
-                },
-                num_rows="fixed",
-                hide_index=True,
-                key="editor_us"
-            )
-            # Armazena no session_state para salvar depois
-            st.session_state["edited_us"] = edited_df_us
-        else:
-            st.warning("Nenhum dado disponível para ações americanas")
+# Ações Americanas
+st.subheader("🇺🇸 Ações Americanas")
+st.caption("💡 **Dica:** RSI > 70 ativa stop automático em 1.0x ATR (proteção de lucro). Edite 'ATR Mult.' para personalizar.")
+if US_STOCKS:
+    st.caption(f"📊 Analisando {len(US_STOCKS)} ticker(s): {', '.join(US_STOCKS)}")
+    df_us = get_market_data(US_STOCKS, mult_us, individual_multipliers=INDIVIDUAL_MULTIPLIERS)
+    if not df_us.empty:
+        # Configura colunas editáveis
+        edited_df_us = st.data_editor(
+            df_us[["Ticker", "Preço Atual", "RSI (Termômetro)", "Stop Loss Sugerido", "Alvo (Gain)", "Potencial (%)", "Distância Stop (%)", "Tendência", "ATR Mult."]],
+            use_container_width=True,
+            column_config={
+                "Ticker": st.column_config.TextColumn("Ticker", disabled=True),
+                "Preço Atual": st.column_config.NumberColumn(
+                    "Preço Atual",
+                    format="$%.1f",
+                    disabled=True
+                ),
+                "RSI (Termômetro)": st.column_config.TextColumn("RSI (Termômetro)", disabled=True),
+                "Stop Loss Sugerido": st.column_config.NumberColumn(
+                    "Stop Loss 🛑",
+                    format="$%.1f",
+                    help="Preço de venda automática para limitar perdas. RSI > 70 ajusta para 1.0x ATR.",
+                    disabled=True
+                ),
+                "Alvo (Gain)": st.column_config.NumberColumn(
+                    "Alvo (Gain) 🎯",
+                    format="$%.1f",
+                    help="Preço alvo de lucro (2.0x ATR acima do preço atual). Meta de venda estratégica.",
+                    disabled=True
+                ),
+                "Potencial (%)": st.column_config.NumberColumn(
+                    "Potencial 📈",
+                    format="%.1f%%",
+                    help="Ganho percentual se atingir o alvo projetado.",
+                    disabled=True
+                ),
+                "Distância Stop (%)": st.column_config.NumberColumn(
+                    "Risco (%)",
+                    format="%.1f%%",
+                    help="Distância percentual até o stop loss (quanto pode cair antes de vender).",
+                    disabled=True
+                ),
+                "Tendência": st.column_config.TextColumn("Tendência", disabled=True),
+                "ATR Mult.": st.column_config.NumberColumn(
+                    "ATR Mult. ⚙️",
+                    help="Multiplicador do ATR para calcular o stop loss. Clique duplo para editar!",
+                    min_value=0.1,
+                    max_value=5.0,
+                    step=0.1,
+                    format="%.1fx",
+                    required=True,
+                ),
+            },
+            num_rows="fixed",
+            hide_index=True,
+            key="editor_us"
+        )
+        # Armazena no session_state para salvar depois
+        st.session_state["edited_us"] = edited_df_us
     else:
-        st.info("Adicione tickers em config.py")
+        st.warning("Nenhum dado disponível para ações americanas")
+else:
+    st.info("Adicione tickers em config.py")
 
-with col2:
-    st.subheader("🇧🇷 FIIs Brasileiros")
-    st.caption("💡 **Dica:** RSI > 70 ativa stop automático em 1.0x ATR (proteção de lucro). Edite 'ATR Mult.' para personalizar.")
-    if BR_FIIS:
-        st.caption(f"📊 Analisando {len(BR_FIIS)} ticker(s): {', '.join(BR_FIIS)}")
-        df_br = get_market_data(BR_FIIS, mult_br, individual_multipliers=INDIVIDUAL_MULTIPLIERS)
-        if not df_br.empty:
-            # Configura colunas editáveis
-            edited_df_br = st.data_editor(
-                df_br[["Ticker", "Preço Atual", "RSI (Termômetro)", "Stop Loss Sugerido", "Alvo (Gain)", "Potencial (%)", "Distância Stop (%)", "Tendência", "ATR Mult."]],
-                use_container_width=True,
-                column_config={
-                    "Ticker": st.column_config.TextColumn("Ticker", disabled=True),
-                    "Preço Atual": st.column_config.NumberColumn(
-                        "Preço Atual",
-                        format="R$ %.1f",
-                        disabled=True
-                    ),
-                    "RSI (Termômetro)": st.column_config.TextColumn("RSI (Termômetro)", disabled=True),
-                    "Stop Loss Sugerido": st.column_config.NumberColumn(
-                        "Stop Loss 🛑",
-                        format="R$ %.1f",
-                        help="Preço de venda automática para limitar perdas. RSI > 70 ajusta para 1.0x ATR.",
-                        disabled=True
-                    ),
-                    "Alvo (Gain)": st.column_config.NumberColumn(
-                        "Alvo (Gain) 🎯",
-                        format="R$ %.1f",
-                        help="Preço alvo de lucro (2.0x ATR acima do preço atual). Meta de venda estratégica.",
-                        disabled=True
-                    ),
-                    "Potencial (%)": st.column_config.NumberColumn(
-                        "Potencial 📈",
-                        format="%.1f%%",
-                        help="Ganho percentual se atingir o alvo projetado.",
-                        disabled=True
-                    ),
-                    "Distância Stop (%)": st.column_config.NumberColumn(
-                        "Risco (%)",
-                        format="%.1f%%",
-                        help="Distância percentual até o stop loss (quanto pode cair antes de vender).",
-                        disabled=True
-                    ),
-                    "Tendência": st.column_config.TextColumn("Tendência", disabled=True),
-                    "ATR Mult.": st.column_config.NumberColumn(
-                        "ATR Mult. ⚙️",
-                        help="Multiplicador do ATR para calcular o stop loss. Clique duplo para editar!",
-                        min_value=0.1,
-                        max_value=5.0,
-                        step=0.1,
-                        format="%.1fx",
-                        required=True,
-                    ),
-                },
-                num_rows="fixed",
-                hide_index=True,
-                key="editor_br"
-            )
-            # Armazena no session_state para salvar depois
-            st.session_state["edited_br"] = edited_df_br
-        else:
-            st.warning("Nenhum dado disponível para FIIs")
+st.markdown("---")  # Separador visual
+
+# FIIs Brasileiros
+st.subheader("🇧🇷 FIIs Brasileiros")
+st.caption("💡 **Dica:** RSI > 70 ativa stop automático em 1.0x ATR (proteção de lucro). Edite 'ATR Mult.' para personalizar.")
+if BR_FIIS:
+    st.caption(f"📊 Analisando {len(BR_FIIS)} ticker(s): {', '.join(BR_FIIS)}")
+    df_br = get_market_data(BR_FIIS, mult_br, individual_multipliers=INDIVIDUAL_MULTIPLIERS)
+    if not df_br.empty:
+        # Configura colunas editáveis
+        edited_df_br = st.data_editor(
+            df_br[["Ticker", "Preço Atual", "RSI (Termômetro)", "Stop Loss Sugerido", "Alvo (Gain)", "Potencial (%)", "Distância Stop (%)", "Tendência", "ATR Mult."]],
+            use_container_width=True,
+            column_config={
+                "Ticker": st.column_config.TextColumn("Ticker", disabled=True),
+                "Preço Atual": st.column_config.NumberColumn(
+                    "Preço Atual",
+                    format="R$ %.1f",
+                    disabled=True
+                ),
+                "RSI (Termômetro)": st.column_config.TextColumn("RSI (Termômetro)", disabled=True),
+                "Stop Loss Sugerido": st.column_config.NumberColumn(
+                    "Stop Loss 🛑",
+                    format="R$ %.1f",
+                    help="Preço de venda automática para limitar perdas. RSI > 70 ajusta para 1.0x ATR.",
+                    disabled=True
+                ),
+                "Alvo (Gain)": st.column_config.NumberColumn(
+                    "Alvo (Gain) 🎯",
+                    format="R$ %.1f",
+                    help="Preço alvo de lucro (2.0x ATR acima do preço atual). Meta de venda estratégica.",
+                    disabled=True
+                ),
+                "Potencial (%)": st.column_config.NumberColumn(
+                    "Potencial 📈",
+                    format="%.1f%%",
+                    help="Ganho percentual se atingir o alvo projetado.",
+                    disabled=True
+                ),
+                "Distância Stop (%)": st.column_config.NumberColumn(
+                    "Risco (%)",
+                    format="%.1f%%",
+                    help="Distância percentual até o stop loss (quanto pode cair antes de vender).",
+                    disabled=True
+                ),
+                "Tendência": st.column_config.TextColumn("Tendência", disabled=True),
+                "ATR Mult.": st.column_config.NumberColumn(
+                    "ATR Mult. ⚙️",
+                    help="Multiplicador do ATR para calcular o stop loss. Clique duplo para editar!",
+                    min_value=0.1,
+                    max_value=5.0,
+                    step=0.1,
+                    format="%.1fx",
+                    required=True,
+                ),
+            },
+            num_rows="fixed",
+            hide_index=True,
+            key="editor_br"
+        )
+        # Armazena no session_state para salvar depois
+        st.session_state["edited_br"] = edited_df_br
     else:
-        st.info("Adicione FIIs em config.py")
+        st.warning("Nenhum dado disponível para FIIs")
+else:
+    st.info("Adicione FIIs em config.py")
 
 # 2. Otimização Fiscal
 st.header("💰 Tesouro Direto: Análise de IR")
