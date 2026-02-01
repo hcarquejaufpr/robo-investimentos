@@ -672,10 +672,22 @@ with col1:
                 use_container_width=True,
                 column_config={
                     "Ticker": st.column_config.TextColumn("Ticker", disabled=True),
-                    "Preço Atual": st.column_config.TextColumn("Preço Atual", disabled=True),
+                    "Preço Atual": st.column_config.NumberColumn(
+                        "Preço Atual",
+                        format="$%.1f",
+                        disabled=True
+                    ),
                     "RSI (Termômetro)": st.column_config.TextColumn("RSI (Termômetro)", disabled=True),
-                    "Stop Loss Sugerido": st.column_config.TextColumn("Stop Loss Sugerido", disabled=True),
-                    "Distância (%)": st.column_config.TextColumn("Distância (%)", disabled=True),
+                    "Stop Loss Sugerido": st.column_config.NumberColumn(
+                        "Stop Loss Sugerido",
+                        format="$%.1f",
+                        disabled=True
+                    ),
+                    "Distância (%)": st.column_config.NumberColumn(
+                        "Distância (%)",
+                        format="%.1f%%",
+                        disabled=True
+                    ),
                     "Tendência": st.column_config.TextColumn("Tendência", disabled=True),
                     "ATR Mult.": st.column_config.NumberColumn(
                         "ATR Mult. 🎯",
@@ -711,10 +723,22 @@ with col2:
                 use_container_width=True,
                 column_config={
                     "Ticker": st.column_config.TextColumn("Ticker", disabled=True),
-                    "Preço Atual": st.column_config.TextColumn("Preço Atual", disabled=True),
+                    "Preço Atual": st.column_config.NumberColumn(
+                        "Preço Atual",
+                        format="R$ %.1f",
+                        disabled=True
+                    ),
                     "RSI (Termômetro)": st.column_config.TextColumn("RSI (Termômetro)", disabled=True),
-                    "Stop Loss Sugerido": st.column_config.TextColumn("Stop Loss Sugerido", disabled=True),
-                    "Distância (%)": st.column_config.TextColumn("Distância (%)", disabled=True),
+                    "Stop Loss Sugerido": st.column_config.NumberColumn(
+                        "Stop Loss Sugerido",
+                        format="R$ %.1f",
+                        disabled=True
+                    ),
+                    "Distância (%)": st.column_config.NumberColumn(
+                        "Distância (%)",
+                        format="%.1f%%",
+                        disabled=True
+                    ),
                     "Tendência": st.column_config.TextColumn("Tendência", disabled=True),
                     "ATR Mult.": st.column_config.NumberColumn(
                         "ATR Mult. 🎯",
