@@ -389,7 +389,7 @@ if st.sidebar.button("💾 Salvar Configurações", type="primary"):
 
 @st.cache_data(ttl=300) # Cache de 5 minutos
 def get_market_data(tickers, multiplier):
-    """Baixa dados, calcula ATR e define Stop Loss."""
+    """Baixa dados, calcula ATR, RSI e define Stop Loss."""
     if not tickers:
         return pd.DataFrame()
     
@@ -413,37 +413,67 @@ def get_market_data(tickers, multiplier):
                 bar.progress((i + 1) / total)
                 continue
                 
-            # Cálculos Matemáticos (ATR e Tendência)
+            # ================================================================
+            # CÁLCULOS TÉCNICOS: ATR, SMA e RSI
+            # ================================================================
+            
+            # 1. ATR (Average True Range) - Volatilidade
             df['High-Low'] = df['High'] - df['Low']
             df['High-PrevClose'] = abs(df['High'] - df['Close'].shift(1))
             df['Low-PrevClose'] = abs(df['Low'] - df['Close'].shift(1))
             df['TR'] = df[['High-Low', 'High-PrevClose', 'Low-PrevClose']].max(axis=1)
-            
-            # ATR de 14 dias
             df['ATR'] = df['TR'].rolling(window=14).mean()
             
-            # Média Móvel de 20 dias (Tendência)
+            # 2. SMA (Simple Moving Average) - Tendência
             df['SMA_20'] = df['Close'].rolling(window=20).mean()
             
+            # 3. RSI (Relative Strength Index) - Força Relativa
+            delta = df['Close'].diff()
+            gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+            loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+            rs = gain / loss
+            df['RSI'] = 100 - (100 / (1 + rs))
+            
             # Verifica se há dados suficientes
-            if pd.isna(df['ATR'].iloc[-1]) or pd.isna(df['SMA_20'].iloc[-1]):
+            if pd.isna(df['ATR'].iloc[-1]) or pd.isna(df['SMA_20'].iloc[-1]) or pd.isna(df['RSI'].iloc[-1]):
                 errors.append(f"⚠️ {ticker}: Dados insuficientes para cálculo (precisa >20 dias)")
                 bar.progress((i + 1) / total)
                 continue
             
-            # Dados finais
+            # ================================================================
+            # EXTRAÇÃO DOS VALORES FINAIS
+            # ================================================================
+            
             last_close = float(df['Close'].iloc[-1])
             last_atr = float(df['ATR'].iloc[-1])
             last_sma = float(df['SMA_20'].iloc[-1])
+            last_rsi = float(df['RSI'].iloc[-1])
             
             # Preço de Stop (Gatilho de Venda)
             stop_price = last_close - (last_atr * multiplier)
             
+            # Tendência baseada na SMA
             tendencia = "🟢 Alta" if last_close > last_sma else "🔴 Baixa"
+            
+            # ================================================================
+            # RSI TERMÔMETRO (Visual de Sobrecompra/Sobrevenda)
+            # ================================================================
+            
+            if last_rsi >= 70:
+                rsi_status = f"🔥 ALERTA: CARO ({last_rsi:.1f})"
+            elif last_rsi <= 30:
+                rsi_status = f"❄️ Barato ({last_rsi:.1f})"
+            else:
+                rsi_status = f"Neutro ({last_rsi:.1f})"
+            
+            # ================================================================
+            # ADICIONA AO RESULTADO
+            # ================================================================
             
             data_list.append({
                 "Ticker": ticker.replace(".SA", ""),
                 "Preço Atual": last_close,
+                "RSI (Termômetro)": rsi_status,
                 "Stop Loss Sugerido": stop_price,
                 "Distância (%)": ((last_close - stop_price) / last_close) * 100,
                 "Tendência": tendencia,
@@ -515,7 +545,7 @@ with col1:
         df_us = get_market_data(US_STOCKS, mult_us)
         if not df_us.empty:
             st.dataframe(
-                df_us[["Ticker", "Preço Atual", "Stop Loss Sugerido", "Distância (%)", "Tendência"]],
+                df_us[["Ticker", "Preço Atual", "RSI (Termômetro)", "Stop Loss Sugerido", "Distância (%)", "Tendência"]],
                 use_container_width=True
             )
         else:
@@ -530,7 +560,7 @@ with col2:
         df_br = get_market_data(BR_FIIS, mult_br)
         if not df_br.empty:
             st.dataframe(
-                df_br[["Ticker", "Preço Atual", "Stop Loss Sugerido", "Distância (%)", "Tendência"]],
+                df_br[["Ticker", "Preço Atual", "RSI (Termômetro)", "Stop Loss Sugerido", "Distância (%)", "Tendência"]],
                 use_container_width=True
             )
         else:
