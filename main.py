@@ -671,16 +671,23 @@ with col1:
                 df_us[["Ticker", "Preço Atual", "RSI (Termômetro)", "Stop Loss Sugerido", "Distância (%)", "Tendência", "ATR Mult."]],
                 use_container_width=True,
                 column_config={
+                    "Ticker": st.column_config.TextColumn("Ticker", disabled=True),
+                    "Preço Atual": st.column_config.TextColumn("Preço Atual", disabled=True),
+                    "RSI (Termômetro)": st.column_config.TextColumn("RSI (Termômetro)", disabled=True),
+                    "Stop Loss Sugerido": st.column_config.TextColumn("Stop Loss Sugerido", disabled=True),
+                    "Distância (%)": st.column_config.TextColumn("Distância (%)", disabled=True),
+                    "Tendência": st.column_config.TextColumn("Tendência", disabled=True),
                     "ATR Mult.": st.column_config.NumberColumn(
                         "ATR Mult. 🎯",
-                        help="Multiplicador do ATR para calcular o stop loss. Clique para editar!",
+                        help="Multiplicador do ATR para calcular o stop loss. Clique duplo para editar!",
                         min_value=0.1,
                         max_value=5.0,
                         step=0.1,
-                        format="%.1f",
+                        format="%.1fx",
+                        required=True,
                     ),
                 },
-                disabled=["Ticker", "Preço Atual", "RSI (Termômetro)", "Stop Loss Sugerido", "Distância (%)", "Tendência"],
+                num_rows="fixed",
                 hide_index=True,
                 key="editor_us"
             )
@@ -703,16 +710,23 @@ with col2:
                 df_br[["Ticker", "Preço Atual", "RSI (Termômetro)", "Stop Loss Sugerido", "Distância (%)", "Tendência", "ATR Mult."]],
                 use_container_width=True,
                 column_config={
+                    "Ticker": st.column_config.TextColumn("Ticker", disabled=True),
+                    "Preço Atual": st.column_config.TextColumn("Preço Atual", disabled=True),
+                    "RSI (Termômetro)": st.column_config.TextColumn("RSI (Termômetro)", disabled=True),
+                    "Stop Loss Sugerido": st.column_config.TextColumn("Stop Loss Sugerido", disabled=True),
+                    "Distância (%)": st.column_config.TextColumn("Distância (%)", disabled=True),
+                    "Tendência": st.column_config.TextColumn("Tendência", disabled=True),
                     "ATR Mult.": st.column_config.NumberColumn(
                         "ATR Mult. 🎯",
-                        help="Multiplicador do ATR para calcular o stop loss. Clique para editar!",
+                        help="Multiplicador do ATR para calcular o stop loss. Clique duplo para editar!",
                         min_value=0.1,
                         max_value=5.0,
                         step=0.1,
-                        format="%.1f",
+                        format="%.1fx",
+                        required=True,
                     ),
                 },
-                disabled=["Ticker", "Preço Atual", "RSI (Termômetro)", "Stop Loss Sugerido", "Distância (%)", "Tendência"],
+                num_rows="fixed",
                 hide_index=True,
                 key="editor_br"
             )
