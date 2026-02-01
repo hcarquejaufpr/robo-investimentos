@@ -72,7 +72,6 @@ def init_database():
                 'INSERT INTO users (username, password, name, email) VALUES (?, ?, ?, ?)',
                 ('admin', 'investidor2026', 'Administrador', 'admin@robo-investimentos.com')
             )
-            print("✅ Usuário admin criado")
         else:
             # Atualiza email se estiver vazio
             cursor.execute(
@@ -81,12 +80,6 @@ def init_database():
             )
         
         conn.commit()
-        print(f"✅ Banco de dados inicializado: {DB_PATH}")
-        
-        # Debug: mostra usuários existentes
-        cursor.execute('SELECT username, email FROM users')
-        users_list = cursor.fetchall()
-        print(f"📊 Usuários no banco: {[dict(u) for u in users_list]}")
 
 # ============================================================================
 # FUNÇÕES DE USUÁRIOS

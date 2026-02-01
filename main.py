@@ -203,33 +203,18 @@ def login_register_page():
             username = st.text_input("Usuário", key="login_username")
             password = st.text_input("Senha", type="password", key="login_password")
             submit = st.form_submit_button("Entrar", type="primary", use_container_width=True)
+        
+        if submit:
+            users = load_users()
             
-            if submit:
-                users = load_users()
-                
-                # Debug temporário - área expandida para forçar visibilidade
-                with st.expander("🔍 DEBUG - Clique para ver detalhes", expanded=True):
-                    st.info(f"**Usuários no banco:** {list(users.keys())}")
-                    st.info(f"**Username digitado:** '{username}'")
-                    st.info(f"**Usuário existe no banco?** {username in users}")
-                    
-                    if username in users:
-                        st.warning(f"**Senha no banco:** '{users[username]['password']}'")
-                        st.warning(f"**Senha digitada:** '{password}'")
-                        st.warning(f"**Senhas são iguais?** {users[username]['password'] == password}")
-                        st.warning(f"**Email no banco:** '{users[username].get('email', 'SEM EMAIL')}'")
-                    else:
-                        st.error(f"❌ Usuário '{username}' NÃO encontrado no banco!")
-                
-                if username in users and users[username]["password"] == password:
-                    st.session_state["authenticated"] = True
-                    st.session_state["username"] = username
-                    st.session_state["user_name"] = users[username]["name"]
-                    st.session_state["user_email"] = users[username].get("email", "")
-                    st.success("✅ Login bem-sucedido! Redirecionando...")
-                    st.rerun()
-                else:
-                    st.error("❌ Usuário ou senha incorretos!")
+            if username in users and users[username]["password"] == password:
+                st.session_state["authenticated"] = True
+                st.session_state["username"] = username
+                st.session_state["user_name"] = users[username]["name"]
+                st.session_state["user_email"] = users[username].get("email", "")
+                st.rerun()
+            else:
+                st.error("❌ Usuário ou senha incorretos!")
     
     # ========== ABA DE CADASTRO ==========
     with tab2:
