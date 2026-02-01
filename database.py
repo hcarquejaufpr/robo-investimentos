@@ -95,14 +95,14 @@ def load_users():
                 'email': row['email'] if row['email'] else ''
             }
         return users
-, email=''):
+
+def save_user(username, password, name, email=''):
     """Salva um novo usuário no banco de dados."""
     with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute(
             'INSERT INTO users (username, password, name, email) VALUES (?, ?, ?, ?)',
-            (username, password, name, emailame, password, name) VALUES (?, ?, ?)',
-            (username, password, name)
+            (username, password, name, email)
         )
         return True
 
