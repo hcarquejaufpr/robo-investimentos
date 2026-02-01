@@ -11,9 +11,17 @@ venv/
 
 # Database de usuários (contém senhas)
 users.json
+users.json.backup
 
 # Carteiras dos usuários (dados privados)
 user_portfolios.json
+user_portfolios.json.backup
+
+# SQLite Database (dados sensíveis)
+data/
+*.db
+*.sqlite
+*.sqlite3
 
 # Test files
 test_*.py

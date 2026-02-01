@@ -1,0 +1,18 @@
+services:
+  robo-investimentos:
+    build: .
+    container_name: robo-investimentos-app
+    ports:
+      - "8501:8501"
+    volumes:
+      - .:/app
+      - /app/.venv  # Evita conflito com venv local
+      - robo-data:/app/data  # Volume persistente para o banco de dados
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+
+# Volume nomeado para persistir dados do banco de dados
+volumes:
+  robo-data:
+    driver: local

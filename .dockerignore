@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+env/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Documentação temporária
+*.md
+!README.md
+
+# Logs
+*.log
+
+# Configurações locais
+.env
+.streamlit/secrets.toml
+
+# Cache
+.pytest_cache/
+.coverage
+htmlcov/

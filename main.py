@@ -10,6 +10,7 @@ import plotly.graph_objects as go
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+import database as db  # Importa módulo de banco de dados
 
 # Desabilita verificação SSL (necessário em algumas redes corporativas)
 ssl._create_default_https_context = ssl._create_unverified_context
@@ -144,81 +145,42 @@ st.set_page_config(
 # SISTEMA DE AUTENTICAÇÃO MULTI-USUÁRIO
 # ============================================================================
 
-import json
-import os
-
 # ============================================================================
-# GERENCIAMENTO DE CARTEIRAS POR USUÁRIO
+# GERENCIAMENTO DE CARTEIRAS POR USUÁRIO (usando SQLite)
 # ============================================================================
 
 def load_user_portfolio(username):
-    """Carrega a carteira específica do usuário."""
-    portfolios_file = "user_portfolios.json"
+    """Carrega a carteira específica do usuário do banco de dados."""
+    portfolio = db.load_user_portfolio(username)
     
-    # Carteira padrão (vazia)
-    default_portfolio = {
-        "US_STOCKS": [],
-        "BR_FIIS": [],
-        "TESOURO_DIRETO": {},
-        "PARAMETROS": {
+    # Carteira padrão (vazia) se não existir
+    if portfolio is None:
+        portfolio = {
+            "US_STOCKS": [],
+            "BR_FIIS": [],
+            "TESOURO_DIRETO": {}
+        }
+    
+    # Adiciona parâmetros se não existirem
+    if "PARAMETROS" not in portfolio:
+        portfolio["PARAMETROS"] = {
             "MULTIPLIER_US": 1.2,
             "MULTIPLIER_BR": 1.0
         }
-    }
     
-    if os.path.exists(portfolios_file):
-        with open(portfolios_file, 'r') as f:
-            portfolios = json.load(f)
-            return portfolios.get(username, default_portfolio)
-    
-    return default_portfolio
+    return portfolio
 
 def save_user_portfolio(username, portfolio):
-    """Salva a carteira específica do usuário."""
-    portfolios_file = "user_portfolios.json"
-    
-    # Carrega todas as carteiras
-    if os.path.exists(portfolios_file):
-        with open(portfolios_file, 'r') as f:
-            portfolios = json.load(f)
-    else:
-        portfolios = {}
-    
-    # Atualiza a carteira do usuário
-    portfolios[username] = portfolio
-    
-    # Salva
-    with open(portfolios_file, 'w') as f:
-        json.dump(portfolios, f, indent=2)
+    """Salva a carteira específica do usuário no banco de dados."""
+    return db.save_user_portfolio(username, portfolio)
 
 def load_users():
-    """Carrega usuários do arquivo ou secrets."""
-    try:
-        # Tenta carregar do Streamlit secrets primeiro
-        users_json = st.secrets.get("users", None)
-        if users_json:
-            return json.loads(users_json)
-    except:
-        pass
-    
-    # Se não existir, carrega do arquivo local
-    users_file = "users.json"
-    if os.path.exists(users_file):
-        with open(users_file, 'r') as f:
-            return json.load(f)
-    
-    # Usuário padrão se não existir nada
-    return {
-        "admin": {
-            "password": "investidor2026",
-            "name": "Administrador"
-        }
-    }
+    """Carrega usuários do banco de dados."""
+    return db.load_users()
 
 def save_users(users):
-    """Salva usuários no arquivo local."""
-    with open("users.json", 'w') as f:
-        json.dump(users, f, indent=2)
+    """Salva usuários - não usado mais, users são salvos individualmente."""
+    pass  # Mantido para compatibilidade
 
 def login_register_page():
     """Tela de login e registro."""
@@ -270,21 +232,17 @@ def login_register_page():
                 elif len(new_password) < 6:
                     st.error("❌ A senha deve ter pelo menos 6 caracteres!")
                 else:
-                    users = load_users()
-                    
-                    if new_username in users:
+                    # Verifica se usuário já existe no banco
+                    if db.user_exists(new_username):
                         st.error("❌ Este usuário já existe!")
                     else:
-                        # Cria novo usuário
-                        users[new_username] = {
-                            "password": new_password,
-                            "name": new_name
-                        }
-                        save_users(users)
+                        # Cria novo usuário no banco
+                        db.save_user(new_username, new_password, new_name)
                         st.success(f"✅ Conta criada com sucesso! Faça login com o usuário: {new_username}")
     
     st.markdown("---")
     st.caption("💡 **Usuário padrão:** admin | **Senha:** investidor2026")
+
 
 def check_authentication():
     """Verifica se o usuário está autenticado."""
