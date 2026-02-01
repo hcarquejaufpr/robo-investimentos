@@ -660,25 +660,52 @@ with st.expander("❓ Como interpretar a tabela", expanded=False):
     
     **🎯 Preço Atual:** Último preço de fechamento do ativo
     
+    ---
+    
+    ### 📊 O que é ATR (Average True Range)?
+    
+    **ATR = Volatilidade Média do Ativo nos últimos 14 dias**
+    
+    É um indicador técnico que mede o quanto o preço do ativo costuma variar diariamente:
+    - **ATR Alto** → Ativo volátil (oscila muito). Ex: ações de tecnologia, small caps
+    - **ATR Baixo** → Ativo estável (oscila pouco). Ex: FIIs, empresas consolidadas
+    
+    **Por que usar ATR?**
+    - **Stops Inteligentes:** Em vez de usar valores fixos ($5, $10), o stop se adapta à volatilidade do ativo
+    - **Comparação Justa:** Um stop de "1.0x ATR" significa "1 oscilação normal" para qualquer ativo
+    - **Evita Falsos Sinais:** Stops muito apertados em ativos voláteis causam vendas desnecessárias
+    
+    **Exemplo Prático:**
+    - AAPL com ATR de $5 → Stop em 1.2x ATR = $6 de folga
+    - FII com ATR de R$0.50 → Stop em 1.0x ATR = R$0.50 de folga
+    
+    ---
+    
     **🌡️ RSI (Termômetro):**
     - 🔥 **ALERTA: CARO (≥70)** → Ativo em sobrecompra, possível topo. **AUTOMÁTICO:** Stop ajustado para 1.0x ATR (proteção de lucro).
     - ❄️ **Barato (≤30)** → Ativo em sobrevenda, possível fundo. Oportunidade de compra (se tendência favorável).
     - **Neutro (31-69)** → Zona normal, sem extremos.
     
     **🛑 Stop Loss:** Preço de venda automática para limitar perdas (calculado com ATR × multiplicador). 
+    - Fórmula: `Stop = Preço Atual - (ATR × Multiplicador)`
     - RSI > 70? Sistema ajusta para 1.0x ATR automaticamente (proteção agressiva em topos).
     
-    **🎯 Alvo (Gain):** Meta de lucro projetada (Preço + 2.0x ATR). Baseado na volatilidade normal do ativo.
+    **🎯 Alvo (Gain):** Meta de lucro projetada baseada em volatilidade.
+    - Fórmula: `Alvo = Preço Atual + (ATR × 2.0)`
+    - Projeta um movimento de alta equivalente a 2 oscilações normais do ativo.
     
     **📈 Potencial (%):** Ganho percentual esperado se atingir o alvo. Compare com "Risco (%)" para avaliar relação risco/retorno.
     
     **⚠️ Risco (%):** Distância percentual até o stop loss (quanto pode cair antes de acionar a venda).
     
-    **📈 Tendência:** 
-    - 🟢 **Alta** → Preço acima da média móvel (SMA 20). Movimento ascendente.
-    - 🔴 **Baixa** → Preço abaixo da média móvel. Movimento descendente.
+    **📈 Tendência (SMA 20 dias):** 
+    - 🟢 **Alta** → Preço acima da média móvel dos últimos 20 dias. Momento ascendente.
+    - 🔴 **Baixa** → Preço abaixo da média móvel. Momento descendente.
     
     **⚙️ ATR Mult.:** Multiplicador editável. Clique duplo para personalizar o stop de cada ativo individualmente.
+    - Conservador: 0.5x - 1.0x (stops mais apertados)
+    - Moderado: 1.2x - 1.5x (equilíbrio)
+    - Agressivo: 2.0x - 3.0x (stops mais largos, maior tolerância)
     """)
 
 # Ações Americanas
