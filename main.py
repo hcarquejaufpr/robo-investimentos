@@ -391,6 +391,13 @@ INDIVIDUAL_MULTIPLIERS = user_portfolio.get("INDIVIDUAL_MULTIPLIERS", {})
 # Quantidades de ativos (para cálculo de ganho/perda)
 ASSET_QUANTITIES = user_portfolio.get("ASSET_QUANTITIES", {})
 
+# DEBUG: Mostra quantidades carregadas (temporário)
+if ASSET_QUANTITIES:
+    st.sidebar.success(f"✅ {len(ASSET_QUANTITIES)} quantidades carregadas!")
+    with st.sidebar.expander("🔍 Ver quantidades carregadas", expanded=False):
+        for ticker, qty in ASSET_QUANTITIES.items():
+            st.write(f"**{ticker}**: {qty}")
+
 # Histórico de operações (compras/vendas)
 OPERATIONS_HISTORY = user_portfolio.get("OPERATIONS_HISTORY", [])
 
@@ -911,6 +918,16 @@ if st.sidebar.button("💾 Salvar Carteira", type="primary", help="Salva sua car
         save_user_portfolio(current_username, user_portfolio)
         
         st.sidebar.success("✅ Sua carteira foi salva!")
+        
+        # DEBUG: Mostra o que foi salvo
+        if new_asset_quantities:
+            st.sidebar.info(f"📊 Quantidades salvas: {len(new_asset_quantities)} ativos")
+            with st.sidebar.expander("🔍 Ver quantidades salvas", expanded=False):
+                for ticker, qty in new_asset_quantities.items():
+                    st.write(f"**{ticker}**: {qty}")
+        else:
+            st.sidebar.warning("⚠️ Nenhuma quantidade foi detectada para salvar")
+        
         st.rerun()  # Recarrega a página para aplicar as novas quantidades
         
     except Exception as e:
