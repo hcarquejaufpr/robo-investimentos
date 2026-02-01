@@ -296,17 +296,31 @@ mult_us = st.sidebar.slider(
     "🇺🇸 Stop Ações EUA (x ATR)", 
     1.0, 3.0, 
     float(PARAMETROS['MULTIPLIER_US']), 
-    0.1
+    0.1,
+    help="""📊 **Multiplicador do ATR para Stop Loss**
+    
+    • **ATR** = Average True Range (volatilidade média)
+    • **Valores menores** (1.0-1.5x) = Stops mais próximos do preço → Mais sensível, vende mais rápido
+    • **Valores maiores** (2.0-3.0x) = Stops mais distantes → Aguenta mais volatilidade
+    
+    💡 Para saída estratégica em 3-4 semanas, recomenda-se 1.0-1.5x"""
 )
 
 mult_br = st.sidebar.slider(
     "🇧🇷 Stop FIIs Brasil (x ATR)", 
     1.0, 3.0, 
     float(PARAMETROS['MULTIPLIER_BR']), 
-    0.1
+    0.1,
+    help="""📊 **Multiplicador do ATR para Stop Loss (FIIs)**
+    
+    • FIIs são geralmente menos voláteis que ações
+    • **Valores menores** (1.0x) = Stops mais próximos → Proteção conservadora
+    • **Valores maiores** (1.5-2.0x) = Stops mais distantes → Permite mais oscilação
+    
+    💡 FIIs tendem a ter ATR menor, então 1.0-1.5x é adequado"""
 )
 
-if st.sidebar.button("🔄 Atualizar Cotações"):
+if st.sidebar.button("🔄 Atualizar Cotações", help="Recarrega os dados do mercado e limpa o cache. Use após salvar configurações ou para obter cotações mais recentes."):
     # Limpa o cache das funções
     st.cache_data.clear()
     # Força atualização da página
@@ -321,7 +335,8 @@ with st.sidebar.expander("🇺🇸 Ações Americanas", expanded=False):
         "Um ticker por linha (ex: AAPL)",
         value="\n".join(US_STOCKS),
         height=100,
-        key="us_stocks"
+        key="us_stocks",
+        help="Digite os tickers das ações americanas, um por linha. Exemplos: AAPL, MSFT, NVDA, GOOGL, TSLA, AMZN"
     )
 
 with st.sidebar.expander("🇧🇷 FIIs Brasileiros", expanded=False):
@@ -329,7 +344,8 @@ with st.sidebar.expander("🇧🇷 FIIs Brasileiros", expanded=False):
         "Um ticker por linha com .SA (ex: HGLG11.SA)",
         value="\n".join(BR_FIIS),
         height=100,
-        key="br_fiis"
+        key="br_fiis",
+        help="Digite os códigos dos FIIs brasileiros com .SA no final. Exemplos: HGLG11.SA, MXRF11.SA, VISC11.SA, KNIP11.SA"
     )
 
 with st.sidebar.expander("💰 Tesouro Direto", expanded=False):
@@ -344,10 +360,20 @@ with st.sidebar.expander("💰 Tesouro Direto", expanded=False):
         "Um título por linha",
         value="\n".join(tesouro_lines),
         height=100,
-        key="tesouro"
+        key="tesouro",
+        help="""💰 **Como preencher:**
+        
+        Formato: Nome do Título | Data de Compra (AAAA-MM-DD)
+        
+        Exemplos:
+        • Tesouro Selic 2027 | 2024-02-15
+        • Tesouro IPCA+ 2035 | 2023-01-10
+        • Tesouro Prefixado 2029 | 2024-08-20
+        
+        O sistema calculará automaticamente a alíquota de IR e recomendará o melhor momento de venda."""
     )
 
-if st.sidebar.button("💾 Salvar Configurações", type="primary"):
+if st.sidebar.button("💾 Salvar Configurações", type="primary", help="Salva sua carteira pessoal (ativos e parâmetros). Seus dados ficam separados de outros usuários."):
     try:
         # Processa ações americanas
         new_us_stocks = [line.strip() for line in us_stocks_text.split('\n') if line.strip()]
@@ -536,10 +562,32 @@ def analyze_taxes(carteira):
 # 1. Análise de Ações e FIIs
 st.header("📊 Renda Variável: Ações e FIIs")
 
+# Explicação dos indicadores
+with st.expander("❓ Como interpretar a tabela", expanded=False):
+    st.markdown("""
+    ### 📖 Guia de Leitura da Análise
+    
+    **🎯 Preço Atual:** Último preço de fechamento do ativo
+    
+    **🌡️ RSI (Termômetro):**
+    - 🔥 **ALERTA: CARO (≥70)** → Ativo em sobrecompra, possível topo. Evite comprar, considere vender.
+    - ❄️ **Barato (≤30)** → Ativo em sobrevenda, possível fundo. Oportunidade de compra (se tendência favorável).
+    - **Neutro (31-69)** → Zona normal, sem extremos.
+    
+    **🛡️ Stop Loss Sugerido:** Preço calculado usando ATR (volatilidade). Se o ativo cair abaixo desse preço, é sinal de venda automática.
+    
+    **📏 Distância (%):** Percentual entre o preço atual e o stop. Quanto maior, mais "espaço" para o ativo cair antes de acionar o stop.
+    
+    **📈 Tendência:** 
+    - 🟢 **Alta** → Preço acima da média móvel (SMA 20). Movimento ascendente.
+    - 🔴 **Baixa** → Preço abaixo da média móvel. Movimento descendente.
+    """)
+
 col1, col2 = st.columns(2)
 
 with col1:
     st.subheader("🇺🇸 Ações Americanas")
+    st.caption("💡 **Dica:** RSI acima de 70 indica sobrecompra (topo), abaixo de 30 indica sobrevenda (fundo)")
     if US_STOCKS:
         st.caption(f"📊 Analisando {len(US_STOCKS)} ticker(s): {', '.join(US_STOCKS)}")
         df_us = get_market_data(US_STOCKS, mult_us)
@@ -555,6 +603,7 @@ with col1:
 
 with col2:
     st.subheader("🇧🇷 FIIs Brasileiros")
+    st.caption("💡 **Dica:** FIIs são menos voláteis. Stops mais próximos (1.0x ATR) são geralmente adequados")
     if BR_FIIS:
         st.caption(f"📊 Analisando {len(BR_FIIS)} ticker(s): {', '.join(BR_FIIS)}")
         df_br = get_market_data(BR_FIIS, mult_br)
@@ -570,6 +619,29 @@ with col2:
 
 # 2. Otimização Fiscal
 st.header("💰 Tesouro Direto: Análise de IR")
+
+# Explicação da tabela regressiva
+with st.expander("❓ Como funciona a tributação do Tesouro Direto", expanded=False):
+    st.markdown("""
+    ### 📖 Tabela Regressiva de IR
+    
+    O Imposto de Renda sobre o Tesouro Direto **diminui com o tempo:**
+    
+    | Período Investido | Alíquota de IR |
+    |-------------------|----------------|
+    | Até 180 dias      | 22,5% 😰       |
+    | 181 a 360 dias    | 20,0% 😐       |
+    | 361 a 720 dias    | 17,5% 😊       |
+    | Acima de 720 dias | 15,0% 😃       |
+    
+    ### 💡 Estratégia de Otimização
+    
+    - 🚨 **AGUARDE** → Se faltam menos de 30 dias para a próxima faixa, vale a pena esperar!
+    - ✅ **Pode vender** → Se está longe da próxima mudança ou já está na menor alíquota (15%).
+    
+    **Exemplo:** Um título com 355 dias investidos está a apenas 6 dias de cair de 20% para 17,5%. 
+    Esperar economiza 2,5% do rendimento!
+    """)
 
 if TESOURO_DIRETO:
     df_tesouro = analyze_taxes(TESOURO_DIRETO)
