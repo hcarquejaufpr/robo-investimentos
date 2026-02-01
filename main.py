@@ -821,6 +821,8 @@ with st.sidebar.expander("📊 Quantidade de Ativos (Opcional)", expanded=False)
         
         # Armazena o DataFrame editado completo
         st.session_state["qty_br_df"] = edited_br_df
+    
+    st.info("⚠️ **Importante:** Após editar as quantidades, clique em **'💾 Salvar Carteira'** (abaixo) e depois em **'🔄 Atualizar Cotações'** para ver o dashboard!")
 
 # --- Registrar Operação ---
 with st.sidebar.expander("📝 Registrar Operação (Compra/Venda)", expanded=False):
