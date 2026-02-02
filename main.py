@@ -836,11 +836,25 @@ with st.sidebar.expander("📊 Quantidade de Ativos (Opcional)", expanded=False)
             old_asset_quantities = current_portfolio.get("ASSET_QUANTITIES", {})
             tickers_para_buscar_preco = []
             
+            # IMPORTANTE: Pega os valores SALVOS no session_state (que foram atualizados pelos data_editors acima)
+            qty_us_df_saved = st.session_state.get("qty_us_df")
+            qty_br_df_saved = st.session_state.get("qty_br_df")
+            
+            # Debug: mostra o que tem no session state
+            st.info(f"🔍 Debug: qty_us_df no session_state? {qty_us_df_saved is not None}")
+            st.info(f"🔍 Debug: qty_br_df no session_state? {qty_br_df_saved is not None}")
+            
             # Processa US
-            if "qty_us_df" in st.session_state and st.session_state.qty_us_df is not None:
-                for _, row in st.session_state.qty_us_df.iterrows():
+            if qty_us_df_saved is not None and not qty_us_df_saved.empty:
+                st.info(f"📊 Processando {len(qty_us_df_saved)} ticker(s) US...")
+                with st.expander("🔍 Ver DataFrame US completo", expanded=True):
+                    st.dataframe(qty_us_df_saved)
+                
+                for _, row in qty_us_df_saved.iterrows():
                     ticker = row["Ticker"]
                     qty = row["Quantidade"]
+                    st.write(f"**{ticker}**: Quantidade = {qty}, É válido? {pd.notna(qty) and qty > 0}")
+                    
                     if pd.notna(qty) and qty > 0:
                         if ticker in old_asset_quantities and isinstance(old_asset_quantities[ticker], dict):
                             new_asset_quantities[ticker] = old_asset_quantities[ticker].copy()
