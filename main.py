@@ -829,7 +829,7 @@ with st.sidebar.expander("📊 Quantidade de Ativos (Opcional)", expanded=False)
         # Executa salvamento direto (mesmo código do botão principal)
         try:
             # Carrega portfolio atual
-            current_portfolio = db.load_portfolio(current_username)
+            current_portfolio = load_user_portfolio(current_username)
             
             # Processa quantidades de ativos
             new_asset_quantities = {}
