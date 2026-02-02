@@ -1673,7 +1673,8 @@ def get_market_data(tickers, multiplier, individual_multipliers=None, asset_quan
             # ================================================================
             
             # Suporta formato antigo (número) e novo (dicionário)
-            asset_info = asset_quantities.get(ticker_clean, 0)
+            # CORREÇÃO: Usa 'ticker' original (com .SA) para buscar em asset_quantities
+            asset_info = asset_quantities.get(ticker, 0)
             
             if isinstance(asset_info, dict):
                 quantity = asset_info.get("quantidade", 0)
