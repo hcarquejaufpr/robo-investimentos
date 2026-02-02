@@ -777,16 +777,15 @@ with st.sidebar.expander("📊 Quantidade de Ativos (Opcional)", expanded=False)
             if submit_us:
                 # Salva as quantidades diretamente
                 try:
-                    current_portfolio = load_user_portfolio(current_username)
-                    new_asset_quantities = current_portfolio.get("ASSET_QUANTITIES", {})
-                    old_asset_quantities = dict(new_asset_quantities)  # Cópia
+                    # Usa o portfolio atual ao invés de recarregar
+                    new_asset_quantities = dict(ASSET_QUANTITIES)  # Cópia do atual
                     tickers_para_buscar_preco = []
                     
                     # Processa cada input
                     for ticker, qty in qty_inputs.items():
                         if qty > 0:
-                            if ticker in old_asset_quantities and isinstance(old_asset_quantities[ticker], dict):
-                                new_asset_quantities[ticker] = old_asset_quantities[ticker].copy()
+                            if ticker in new_asset_quantities and isinstance(new_asset_quantities[ticker], dict):
+                                new_asset_quantities[ticker] = new_asset_quantities[ticker].copy()
                                 new_asset_quantities[ticker]["quantidade"] = float(qty)
                             else:
                                 new_asset_quantities[ticker] = {
@@ -812,9 +811,18 @@ with st.sidebar.expander("📊 Quantidade de Ativos (Opcional)", expanded=False)
                                 except:
                                     new_asset_quantities[ticker]["preco_entrada"] = 0.0
                     
-                    # Salva
-                    current_portfolio["ASSET_QUANTITIES"] = new_asset_quantities
-                    save_user_portfolio(current_username, current_portfolio)
+                    # Monta portfolio completo para salvar
+                    portfolio_to_save = {
+                        "US_STOCKS": US_STOCKS,
+                        "BR_FIIS": BR_FIIS,
+                        "TESOURO_DIRETO": TESOURO_DIRETO,
+                        "ASSET_QUANTITIES": new_asset_quantities,
+                        "PARAMETROS": PARAMETROS,
+                        "INDIVIDUAL_MULTIPLIERS": INDIVIDUAL_MULTIPLIERS,
+                        "OPERATIONS_HISTORY": OPERATIONS_HISTORY,
+                        "PORTFOLIO_SNAPSHOTS": PORTFOLIO_SNAPSHOTS
+                    }
+                    save_user_portfolio(current_username, portfolio_to_save)
                     
                     st.success(f"✅ {len([q for q in new_asset_quantities.values() if isinstance(q, dict) and q.get('quantidade', 0) > 0])} quantidade(s) salva(s)!")
                     st.info("🔄 Clique em 'Atualizar Cotações' no topo para ver as mudanças!")
