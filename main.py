@@ -2190,28 +2190,30 @@ st.caption("💡 **Dica:** RSI > 70 ativa stop automático em 1.0x ATR (proteç�
 if BR_FIIS:
     st.caption(f"📊 Analisando {len(BR_FIIS)} ticker(s): {', '.join(BR_FIIS)}")
     
-    # DEBUG: Mostra quantidades que serão passadas
-    with st.expander("🐛 DEBUG: ASSET_QUANTITIES passado para get_market_data", expanded=True):
-        st.write("**BR_FIIS (lista de tickers):**")
-        st.json(BR_FIIS)
-        st.write("**ASSET_QUANTITIES (dict completo):**")
-        st.json(ASSET_QUANTITIES)
-        st.write("**Matching entre BR_FIIS e ASSET_QUANTITIES:**")
-        for ticker in BR_FIIS:
-            if ticker in ASSET_QUANTITIES:
-                st.success(f"✅ {ticker}: {ASSET_QUANTITIES[ticker]}")
-            else:
-                st.error(f"❌ {ticker}: NÃO encontrado em ASSET_QUANTITIES")
+    # DEBUG: Mostra quantidades que serão passadas (apenas se modo debug ativo)
+    if st.session_state.get('debug_mode', False):
+        with st.expander("🐛 DEBUG: ASSET_QUANTITIES passado para get_market_data", expanded=False):
+            st.write("**BR_FIIS (lista de tickers):**")
+            st.json(BR_FIIS)
+            st.write("**ASSET_QUANTITIES (dict completo):**")
+            st.json(ASSET_QUANTITIES)
+            st.write("**Matching entre BR_FIIS e ASSET_QUANTITIES:**")
+            for ticker in BR_FIIS:
+                if ticker in ASSET_QUANTITIES:
+                    st.success(f"✅ {ticker}: {ASSET_QUANTITIES[ticker]}")
+                else:
+                    st.error(f"❌ {ticker}: NÃO encontrado em ASSET_QUANTITIES")
     
     df_br = get_market_data(BR_FIIS, mult_br, individual_multipliers=INDIVIDUAL_MULTIPLIERS, asset_quantities=ASSET_QUANTITIES)
     
-    # DEBUG: Mostra o DataFrame IMEDIATAMENTE após get_market_data
-    with st.expander("🐛 DEBUG: DataFrame LOGO APÓS get_market_data", expanded=True):
-        st.write("**df_br completo:**")
-        st.dataframe(df_br[["Ticker", "Qtd", "Preço Entrada", "Realizado ($)"]])
-        st.write("**Valores únicos na coluna Qtd:**")
-        st.json(df_br["Qtd"].unique().tolist())
-        st.write(f"**Teste: any(df_br['Qtd'] != '-') = {any(df_br['Qtd'] != '-')}**")
+    # DEBUG: Mostra o DataFrame IMEDIATAMENTE após get_market_data (apenas se modo debug ativo)
+    if st.session_state.get('debug_mode', False):
+        with st.expander("🐛 DEBUG: DataFrame LOGO APÓS get_market_data", expanded=False):
+            st.write("**df_br completo:**")
+            st.dataframe(df_br[["Ticker", "Qtd", "Preço Entrada", "Realizado ($)"]])
+            st.write("**Valores únicos na coluna Qtd:**")
+            st.json(df_br["Qtd"].unique().tolist())
+            st.write(f"**Teste: any(df_br['Qtd'] != '-') = {any(df_br['Qtd'] != '-')}**")
     
     if not df_br.empty:
         # === PAINEL DE PRIORIDADES DE VENDA BR ===
@@ -2285,23 +2287,25 @@ if BR_FIIS:
         # Ordena por prioridade
         df_br_sorted = df_br.sort_values("Prioridade")
         
-        # DEBUG: Mostra todas as colunas disponíveis
-        with st.expander("🐛 DEBUG: Colunas do DataFrame BR", expanded=True):
-            st.write("**Todas as colunas retornadas por get_market_data:**")
-            st.json(df_br.columns.tolist())
-            st.write("**Primeiras linhas do DataFrame:**")
-            st.dataframe(df_br.head(2))
-            st.write("**Verificação de quantidades:**")
-            qtd_values = df_br["Qtd"].tolist()
-            st.write(f"Valores na coluna 'Qtd': {qtd_values}")
-            st.write(f"Tem quantidades? {any(df_br['Qtd'] != '-')}")
+        # DEBUG: Mostra todas as colunas disponíveis (apenas se modo debug ativo)
+        if st.session_state.get('debug_mode', False):
+            with st.expander("🐛 DEBUG: Colunas do DataFrame BR", expanded=False):
+                st.write("**Todas as colunas retornadas por get_market_data:**")
+                st.json(df_br.columns.tolist())
+                st.write("**Primeiras linhas do DataFrame:**")
+                st.dataframe(df_br.head(2))
+                st.write("**Verificação de quantidades:**")
+                qtd_values = df_br["Qtd"].tolist()
+                st.write(f"Valores na coluna 'Qtd': {qtd_values}")
+                st.write(f"Tem quantidades? {any(df_br['Qtd'] != '-')}")
         
         # Define quais colunas mostrar - USA EXATAMENTE A MESMA LÓGICA QUE US_STOCKS
         has_quantities_br = any(df_br["Qtd"] != "-")
         
-        # DEBUG: Mostra qual conjunto de colunas será usado
-        with st.expander("🐛 DEBUG: Colunas que serão exibidas", expanded=True):
-            st.write(f"**has_quantities_br = {has_quantities_br}**")
+        # DEBUG: Mostra qual conjunto de colunas será usado (apenas se modo debug ativo)
+        if st.session_state.get('debug_mode', False):
+            with st.expander("🐛 DEBUG: Colunas que serão exibidas", expanded=False):
+                st.write(f"**has_quantities_br = {has_quantities_br}**")
             
         if has_quantities_br:
             # MESMAS colunas e MESMA ordem que ações US
@@ -2309,29 +2313,32 @@ if BR_FIIS:
                                  "Valor Posição", "Projeção Alvo ($)", "Projeção Stop ($)", "Volatilidade (ATR) %", "RSI (Termômetro)", 
                                  "Stop Loss", "Alvo (Gain)", "Potencial", "Risco (%)", 
                                  "Tendência", "ATR Mult. ⚙️"]
-            st.success(f"✅ USANDO COLUNAS COM QUANTIDADES ({len(display_columns_br)} colunas)")
-            st.json(display_columns_br)
+            if st.session_state.get('debug_mode', False):
+                st.success(f"✅ USANDO COLUNAS COM QUANTIDADES ({len(display_columns_br)} colunas)")
+                st.json(display_columns_br)
         else:
             display_columns_br = ["Recomendação", "Ticker", "Preço Atual", "Volatilidade (ATR) %", "RSI (Termômetro)", 
                                  "Stop Loss", "Alvo (Gain)", "Potencial", "Risco (%)", 
                                  "Tendência", "ATR Mult. ⚙️"]
-            st.warning(f"⚠️ USANDO COLUNAS SEM QUANTIDADES ({len(display_columns_br)} colunas)")
-            st.json(display_columns_br)
-        
-        # DEBUG: Tenta selecionar as colunas e mostra o resultado
-        with st.expander("🐛 DEBUG: DataFrame após seleção de colunas", expanded=True):
-            try:
-                df_to_display = df_br_sorted[display_columns_br]
-                st.write("**DataFrame que será exibido:**")
-                st.dataframe(df_to_display)
-                st.write(f"**Shape: {df_to_display.shape}**")
-                st.write(f"**Colunas: {df_to_display.columns.tolist()}**")
-            except Exception as e:
-                st.error(f"❌ ERRO ao selecionar colunas: {e}")
-                st.write("**Colunas disponíveis no DataFrame:**")
-                st.json(df_br_sorted.columns.tolist())
-                st.write("**Colunas solicitadas:**")
+            if st.session_state.get('debug_mode', False):
+                st.warning(f"⚠️ USANDO COLUNAS SEM QUANTIDADES ({len(display_columns_br)} colunas)")
                 st.json(display_columns_br)
+        
+        # DEBUG: Tenta selecionar as colunas e mostra o resultado (apenas se modo debug ativo)
+        if st.session_state.get('debug_mode', False):
+            with st.expander("🐛 DEBUG: DataFrame após seleção de colunas", expanded=False):
+                try:
+                    df_to_display = df_br_sorted[display_columns_br]
+                    st.write("**DataFrame que será exibido:**")
+                    st.dataframe(df_to_display)
+                    st.write(f"**Shape: {df_to_display.shape}**")
+                    st.write(f"**Colunas: {df_to_display.columns.tolist()}**")
+                except Exception as e:
+                    st.error(f"❌ ERRO ao selecionar colunas: {e}")
+                    st.write("**Colunas disponíveis no DataFrame:**")
+                    st.json(df_br_sorted.columns.tolist())
+                    st.write("**Colunas solicitadas:**")
+                    st.json(display_columns_br)
         
         # Configura colunas editáveis - USA EXATAMENTE MESMA CONFIG QUE US_STOCKS
         edited_df_br = st.data_editor(
