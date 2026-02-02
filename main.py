@@ -1360,6 +1360,10 @@ with st.sidebar.expander("💾 Salvar Quantidades", expanded=False):
             ASSET_QUANTITIES.clear()
             ASSET_QUANTITIES.update(new_asset_quantities)
             
+            # Limpa cache para forçar recálculo das tabelas
+            st.cache_data.clear()
+            st.cache_resource.clear()
+            
             st.success(f"✅ {len([q for q in new_asset_quantities.values() if isinstance(q, dict) and q.get('quantidade', 0) > 0])} quantidade(s) salva(s)!")
             st.rerun()
             
@@ -1451,7 +1455,7 @@ with st.sidebar.expander("📝 Registrar Operação (Compra/Venda)", expanded=Fa
 
 # --- Funções de Cálculo ---
 
-@st.cache_data(ttl=300) # Cache de 5 minutos
+@st.cache_data(ttl=300, hash_funcs={dict: lambda x: str(sorted(x.items()))})
 def get_market_data(tickers, multiplier, individual_multipliers=None, asset_quantities=None):
     """Baixa dados, calcula ATR, RSI e define Stop Loss."""
     if not tickers:
