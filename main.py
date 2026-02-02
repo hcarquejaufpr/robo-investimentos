@@ -348,7 +348,11 @@ user_portfolio = load_user_portfolio(current_username)
 US_STOCKS = user_portfolio.get("US_STOCKS", [])
 BR_FIIS = user_portfolio.get("BR_FIIS", [])
 TESOURO_DIRETO = user_portfolio.get("TESOURO_DIRETO", {})
-PARAMETROS = user_portfolio.get("PARAMETROS", {"MULTIPLIER_US": 1.2, "MULTIPLIER_BR": 1.0})
+
+# Garante valores padrão para parâmetros
+PARAMETROS = user_portfolio.get("PARAMETROS", {})
+if not PARAMETROS or "MULTIPLIER_US" not in PARAMETROS:
+    PARAMETROS = {"MULTIPLIER_US": 1.2, "MULTIPLIER_BR": 1.0}
 
 # Multiplicadores individuais por ticker (opcional)
 INDIVIDUAL_MULTIPLIERS = user_portfolio.get("INDIVIDUAL_MULTIPLIERS", {})
