@@ -2261,10 +2261,11 @@ if BR_FIIS:
         # Ordena por prioridade
         df_br_sorted = df_br.sort_values("Prioridade")
         
-        # Define quais colunas mostrar (depende se tem quantidades cadastradas)
+        # Define quais colunas mostrar - USA EXATAMENTE A MESMA LÓGICA QUE US_STOCKS
         has_quantities_br = any(df_br["Qtd"] != "-")
         
         if has_quantities_br:
+            # MESMAS colunas e MESMA ordem que ações US
             display_columns_br = ["Recomendação", "Ticker", "Qtd", "Preço Entrada", "Preço Atual", "Realizado ($)", "Realizado (%)", 
                                  "Valor Posição", "Projeção Alvo ($)", "Projeção Stop ($)", "Volatilidade (ATR) %", "RSI (Termômetro)", 
                                  "Stop Loss", "Alvo (Gain)", "Potencial", "Risco (%)", 
@@ -2274,14 +2275,14 @@ if BR_FIIS:
                                  "Stop Loss", "Alvo (Gain)", "Potencial", "Risco (%)", 
                                  "Tendência", "ATR Mult. ⚙️"]
         
-        # Configura colunas editáveis
+        # Configura colunas editáveis - USA EXATAMENTE MESMA CONFIG QUE US_STOCKS
         edited_df_br = st.data_editor(
             df_br_sorted[display_columns_br],
             use_container_width=True,
             column_config={
                 "Recomendação": st.column_config.TextColumn(
                     "🎯 Ação",
-                    help="Recomendação baseada na análise de tendência",
+                    help="Recomendação baseada na análise de tendência: Vender Urgente, Considerar Venda, Monitorar",
                     disabled=True,
                     width="medium"
                 ),
@@ -2293,49 +2294,49 @@ if BR_FIIS:
                     help="Preço quando você cadastrou a quantidade",
                     disabled=True
                 ),
-                "Valor Posição": st.column_config.NumberColumn(
-                    "Valor Posição",
-                    format="R$ %.0f",
-                    help="Valor total investido neste ativo (Quantidade × Preço Atual)",
+                "Preço Atual": st.column_config.NumberColumn(
+                    "Preço Atual",
+                    format="R$ %.2f",
                     disabled=True
                 ),
                 "Realizado ($)": st.column_config.NumberColumn(
-                    "Realizado ($)",
+                    "Realizado (R$)",
                     format="R$ %.2f",
-                    help="Ganho/Perda real desde sua entrada",
+                    help="💰 Quanto você ganhou/perdeu desde que cadastrou. Cálculo: (Preço Atual - Preço Entrada) × Quantidade",
                     disabled=True
                 ),
                 "Realizado (%)": st.column_config.NumberColumn(
                     "Realizado (%)",
                     format="%.2f%%",
-                    help="Percentual de ganho/perda desde sua entrada",
+                    help="📊 Percentual de ganho/perda desde que cadastrou. Cálculo: [(Preço Atual - Preço Entrada) / Preço Entrada] × 100",
+                    disabled=True
+                ),
+                "Valor Posição": st.column_config.NumberColumn(
+                    "Valor Posição",
+                    format="R$ %.0f",
+                    help="📈 Valor total que você tem investido HOJE neste ativo. Cálculo: Preço Atual × Quantidade",
                     disabled=True
                 ),
                 "Projeção Alvo ($)": st.column_config.NumberColumn(
-                    "Projeção Alvo ($)",
-                    format="R$ %.2f",
-                    help="Lucro potencial se atingir o alvo",
+                    "💰 Ganho se Alvo",
+                    format="R$ %.0f",
+                    help="💰 Lucro em reais se atingir o alvo. Cálculo: (Preço Alvo - Preço Atual) × Quantidade",
                     disabled=True
                 ),
                 "Projeção Stop ($)": st.column_config.NumberColumn(
-                    "Projeção Stop ($)",
-                    format="R$ %.2f",
-                    help="Perda potencial se acionar o stop",
+                    "🛑 Perda se Stop",
+                    format="R$ %.0f",
+                    help="🛑 Perda em reais se acionar o stop. Cálculo: (Preço Atual - Stop Loss) × Quantidade",
                     disabled=True
                 ),
-                "Preço Atual": st.column_config.NumberColumn(
-                    "Preço Atual",
-                    format="R$ %.1f",
-                    disabled=True
-                ),
-                "ATR %": st.column_config.NumberColumn(
+                "Volatilidade (ATR) %": st.column_config.NumberColumn(
                     "Volatilidade (ATR) %",
                     format="%.1f%%",
                     help="Oscilação diária média. <2% = estável, 2-5% = moderado, >5% = volátil.",
                     disabled=True
                 ),
                 "RSI (Termômetro)": st.column_config.TextColumn("RSI (Termômetro)", disabled=True),
-                "Stop Loss Sugerido": st.column_config.NumberColumn(
+                "Stop Loss": st.column_config.NumberColumn(
                     "Stop Loss 🛑",
                     format="R$ %.1f",
                     help="Preço de venda automática para limitar perdas. RSI > 70 ajusta para 1.0x ATR.",
@@ -2352,7 +2353,7 @@ if BR_FIIS:
                     help="Ganho % se atingir o alvo. ⚠️ = Contra tendência de baixa (operação mais arriscada).",
                     disabled=True
                 ),
-                "Distância Stop (%)": st.column_config.NumberColumn(
+                "Risco (%)": st.column_config.NumberColumn(
                     "Risco (%)",
                     format="%.1f%%",
                     help="Distância percentual até o stop loss (quanto pode cair antes de vender).",
