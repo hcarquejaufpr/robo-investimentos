@@ -822,7 +822,13 @@ with st.sidebar.expander("📊 Quantidade de Ativos (Opcional)", expanded=False)
         # Armazena o DataFrame editado completo
         st.session_state["qty_br_df"] = edited_br_df
     
-    st.info("⚠️ **Importante:** Após editar as quantidades, clique em **'💾 Salvar Carteira'** (abaixo) e depois em **'🔄 Atualizar Cotações'** para ver o dashboard!")
+    st.warning("⚠️ **Importante:** Clique no botão abaixo para SALVAR as quantidades!")
+    
+    # Botão de salvar DENTRO do expander para facilitar
+    if st.button("💾 SALVAR QUANTIDADES AGORA", type="primary", use_container_width=True, key="save_qty_button"):
+        st.info("✅ Salvando... Aguarde o recarregamento da página!")
+        # Força o salvamento usando o mesmo código do botão principal
+        st.session_state["trigger_save_from_qty"] = True
 
 # --- Registrar Operação ---
 with st.sidebar.expander("📝 Registrar Operação (Compra/Venda)", expanded=False):
@@ -907,7 +913,15 @@ with st.sidebar.expander("📝 Registrar Operação (Compra/Venda)", expanded=Fa
         else:
             st.error("❌ Ticker é obrigatório!")
 
-if st.sidebar.button("💾 Salvar Carteira", type="primary", help="Salva sua carteira pessoal (ativos, quantidades e parâmetros). Recarrega automaticamente a página."):
+# Verifica se foi clicado o botão de salvar do expander de quantidades
+if st.session_state.get("trigger_save_from_qty", False):
+    st.session_state["trigger_save_from_qty"] = False
+    # Aciona o salvamento como se fosse o botão principal
+    save_triggered = True
+else:
+    save_triggered = st.sidebar.button("💾 Salvar Carteira", type="primary", help="Salva sua carteira pessoal (ativos, quantidades e parâmetros). Recarrega automaticamente a página.")
+
+if save_triggered:
     try:
         # Processa ações americanas
         new_us_stocks = [line.strip() for line in us_stocks_text.split('\n') if line.strip()]
