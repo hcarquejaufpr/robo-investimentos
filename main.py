@@ -12,6 +12,10 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import database as db
 
+# Limpa cache do Streamlit para forçar recarregamento
+st.cache_data.clear()
+st.cache_resource.clear()
+
 # Inicializa banco de dados
 db.init_database()
 
@@ -663,8 +667,29 @@ with st.sidebar.expander("🇺🇸 Ações e ETFs (EUA)", expanded=False):
         key="us_stocks",
         help="Digite os tickers de ações e ETFs americanos, um por linha. Exemplos de Ações: AAPL, MSFT, NVDA, GOOGL, TSLA. Exemplos de ETFs: SPY, QQQ, VTI, VOO"
     )
+    
+    st.markdown("---")
+    
+    if st.button("💾 Salvar Ações US", key="save_us_stocks", type="primary", use_container_width=True):
+        new_us_stocks = [line.strip() for line in us_stocks_text.split('\n') if line.strip()]
+        portfolio_to_save = {
+            "US_STOCKS": new_us_stocks,
+            "BR_FIIS": BR_FIIS,
+            "TESOURO_DIRETO": TESOURO_DIRETO,
+            "ASSET_QUANTITIES": ASSET_QUANTITIES,
+            "PARAMETROS": PARAMETROS,
+            "INDIVIDUAL_MULTIPLIERS": INDIVIDUAL_MULTIPLIERS,
+            "OPERATIONS_HISTORY": OPERATIONS_HISTORY,
+            "PORTFOLIO_SNAPSHOTS": PORTFOLIO_SNAPSHOTS
+        }
+        save_user_portfolio(current_username, portfolio_to_save)
+        US_STOCKS.clear()
+        US_STOCKS.extend(new_us_stocks)
+        st.success("✅ Ações US salvas!")
+        st.rerun()
 
 with st.sidebar.expander("🇧🇷 FIIs Brasileiros", expanded=False):
+    st.caption("👇 Digite os códigos dos FIIs e clique no botão azul abaixo para salvar")
     br_fiis_text = st.text_area(
         "Um ticker por linha com .SA (ex: HGLG11.SA)",
         value="\n".join(BR_FIIS),
@@ -672,6 +697,27 @@ with st.sidebar.expander("🇧🇷 FIIs Brasileiros", expanded=False):
         key="br_fiis",
         help="Digite os códigos dos FIIs brasileiros com .SA no final. Exemplos: HGLG11.SA, MXRF11.SA, VISC11.SA, KNIP11.SA"
     )
+    
+    st.markdown("---")
+    st.write("")  # Espaço extra
+    
+    if st.button("💾 Salvar FIIs BR", key="save_br_fiis", type="primary", use_container_width=True):
+        new_br_fiis = [line.strip() for line in br_fiis_text.split('\n') if line.strip()]
+        portfolio_to_save = {
+            "US_STOCKS": US_STOCKS,
+            "BR_FIIS": new_br_fiis,
+            "TESOURO_DIRETO": TESOURO_DIRETO,
+            "ASSET_QUANTITIES": ASSET_QUANTITIES,
+            "PARAMETROS": PARAMETROS,
+            "INDIVIDUAL_MULTIPLIERS": INDIVIDUAL_MULTIPLIERS,
+            "OPERATIONS_HISTORY": OPERATIONS_HISTORY,
+            "PORTFOLIO_SNAPSHOTS": PORTFOLIO_SNAPSHOTS
+        }
+        save_user_portfolio(current_username, portfolio_to_save)
+        BR_FIIS.clear()
+        BR_FIIS.extend(new_br_fiis)
+        st.success("✅ FIIs BR salvos!")
+        st.rerun()
 
 with st.sidebar.expander("💰 Tesouro Direto", expanded=False):
     st.markdown("**Formato:** Nome | Data de Compra")
@@ -697,6 +743,34 @@ with st.sidebar.expander("💰 Tesouro Direto", expanded=False):
         
         O sistema calculará automaticamente a alíquota de IR e recomendará o melhor momento de venda."""
     )
+    
+    st.markdown("---")
+    
+    if st.button("💾 Salvar Tesouro Direto", key="save_tesouro", type="primary", use_container_width=True):
+        new_tesouro = {}
+        for line in tesouro_text.split('\n'):
+            if '|' in line:
+                parts = line.split('|')
+                if len(parts) == 2:
+                    nome = parts[0].strip()
+                    data = parts[1].strip()
+                    new_tesouro[nome] = {'data_compra': data}
+        
+        portfolio_to_save = {
+            "US_STOCKS": US_STOCKS,
+            "BR_FIIS": BR_FIIS,
+            "TESOURO_DIRETO": new_tesouro,
+            "ASSET_QUANTITIES": ASSET_QUANTITIES,
+            "PARAMETROS": PARAMETROS,
+            "INDIVIDUAL_MULTIPLIERS": INDIVIDUAL_MULTIPLIERS,
+            "OPERATIONS_HISTORY": OPERATIONS_HISTORY,
+            "PORTFOLIO_SNAPSHOTS": PORTFOLIO_SNAPSHOTS
+        }
+        save_user_portfolio(current_username, portfolio_to_save)
+        TESOURO_DIRETO.clear()
+        TESOURO_DIRETO.update(new_tesouro)
+        st.success("✅ Tesouro Direto salvo!")
+        st.rerun()
 
 # --- Modo Debug ---
 st.sidebar.markdown("---")
@@ -734,6 +808,38 @@ with st.sidebar.expander("🎯 Multiplicador ATR por Ativo", expanded=False):
         key="individual_mults",
         help="Deixe em branco para usar os multiplicadores padrão. Defina apenas os tickers que quer personalizar."
     )
+    
+    st.markdown("---")
+    
+    if st.button("💾 Salvar Multiplicadores", key="save_mults", type="primary", use_container_width=True):
+        new_individual_multipliers = {}
+        for line in individual_mult_text.split('\n'):
+            line = line.strip()
+            if ':' in line:
+                try:
+                    ticker, mult = line.split(':', 1)
+                    ticker = ticker.strip().upper()
+                    mult = float(mult.strip())
+                    if mult > 0:
+                        new_individual_multipliers[ticker] = mult
+                except ValueError:
+                    st.warning(f"⚠️ Linha ignorada: {line}")
+        
+        portfolio_to_save = {
+            "US_STOCKS": US_STOCKS,
+            "BR_FIIS": BR_FIIS,
+            "TESOURO_DIRETO": TESOURO_DIRETO,
+            "ASSET_QUANTITIES": ASSET_QUANTITIES,
+            "PARAMETROS": PARAMETROS,
+            "INDIVIDUAL_MULTIPLIERS": new_individual_multipliers,
+            "OPERATIONS_HISTORY": OPERATIONS_HISTORY,
+            "PORTFOLIO_SNAPSHOTS": PORTFOLIO_SNAPSHOTS
+        }
+        save_user_portfolio(current_username, portfolio_to_save)
+        INDIVIDUAL_MULTIPLIERS.clear()
+        INDIVIDUAL_MULTIPLIERS.update(new_individual_multipliers)
+        st.success("✅ Multiplicadores salvos!")
+        st.rerun()
 
 # --- Quantidades de Ativos ---
 with st.sidebar.expander("📊 Quantidade de Ativos (Opcional)", expanded=False):
@@ -748,113 +854,84 @@ with st.sidebar.expander("📊 Quantidade de Ativos (Opcional)", expanded=False)
     
     # --- 🇺🇸 Quantidades EUA ---
     with st.expander("🇺🇸 Quantidades EUA", expanded=True):
-        st.info("✏️ **Digite as quantidades e clique em 'SALVAR' no final desta seção**")
+        st.info("💡 **Edite a tabela abaixo e clique em 'SALVAR QUANTIDADES AGORA' no final para salvar**")
         
-        with st.form(key="form_qty_us"):
-            st.markdown("### Digite as quantidades:")
-            
-            # Cria um input para cada ticker
-            qty_inputs = {}
-            for ticker in US_STOCKS:
-                asset_info = ASSET_QUANTITIES.get(ticker, 0)
-                if isinstance(asset_info, dict):
-                    current_qty = asset_info.get("quantidade", 0)
-                else:
-                    current_qty = asset_info if asset_info else 0
-                
-                qty_inputs[ticker] = st.number_input(
-                    f"**{ticker}**",
-                    min_value=0.0,
-                    value=float(current_qty),
-                    step=0.000001,
-                    format="%.6f",
-                    key=f"qty_input_{ticker}"
-                )
-            
-            # Botão de submit do formulário
-            submit_us = st.form_submit_button("💾 SALVAR QUANTIDADES US", type="primary", use_container_width=True)
-            
-            if submit_us:
-                # Salva as quantidades diretamente
-                try:
-                    # Usa o portfolio atual ao invés de recarregar
-                    new_asset_quantities = dict(ASSET_QUANTITIES)  # Cópia do atual
-                    tickers_para_buscar_preco = []
-                    
-                    # Processa cada input
-                    for ticker, qty in qty_inputs.items():
-                        if qty > 0:
-                            if ticker in new_asset_quantities and isinstance(new_asset_quantities[ticker], dict):
-                                new_asset_quantities[ticker] = new_asset_quantities[ticker].copy()
-                                new_asset_quantities[ticker]["quantidade"] = float(qty)
-                            else:
-                                new_asset_quantities[ticker] = {
-                                    "quantidade": float(qty),
-                                    "preco_entrada": None,
-                                    "data_entrada": datetime.now().strftime("%Y-%m-%d")
-                                }
-                                tickers_para_buscar_preco.append(ticker)
-                        elif ticker in new_asset_quantities:
-                            # Remove se quantidade for zero
-                            del new_asset_quantities[ticker]
-                    
-                    # Busca preços
-                    if tickers_para_buscar_preco:
-                        with st.spinner(f"Buscando preços para {len(tickers_para_buscar_preco)} ativo(s)..."):
-                            for ticker in tickers_para_buscar_preco:
-                                try:
-                                    stock = yf.Ticker(ticker)
-                                    hist = stock.history(period="1d")
-                                    if not hist.empty:
-                                        preco_atual = hist['Close'].iloc[-1]
-                                        new_asset_quantities[ticker]["preco_entrada"] = float(preco_atual)
-                                except:
-                                    new_asset_quantities[ticker]["preco_entrada"] = 0.0
-                    
-                    # Monta portfolio completo para salvar
-                    portfolio_to_save = {
-                        "US_STOCKS": US_STOCKS,
-                        "BR_FIIS": BR_FIIS,
-                        "TESOURO_DIRETO": TESOURO_DIRETO,
-                        "ASSET_QUANTITIES": new_asset_quantities,
-                        "PARAMETROS": PARAMETROS,
-                        "INDIVIDUAL_MULTIPLIERS": INDIVIDUAL_MULTIPLIERS,
-                        "OPERATIONS_HISTORY": OPERATIONS_HISTORY,
-                        "PORTFOLIO_SNAPSHOTS": PORTFOLIO_SNAPSHOTS
-                    }
-                    save_user_portfolio(current_username, portfolio_to_save)
-                    
-                    st.success(f"✅ {len([q for q in new_asset_quantities.values() if isinstance(q, dict) and q.get('quantidade', 0) > 0])} quantidade(s) salva(s)!")
-                    st.info("🔄 Clique em 'Atualizar Cotações' no topo para ver as mudanças!")
-                    
-                except Exception as e:
-                    st.error(f"❌ Erro: {e}")
-                    import traceback
-                    st.code(traceback.format_exc())
-    
-    # --- 🇧🇷 Quantidades Brasil ---
-    with st.expander("🇧🇷 Quantidades Brasil", expanded=True):
-        # Prepara DataFrame pré-preenchido com tickers BR
-        br_data = []
-        for ticker in BR_FIIS:
+        # Prepara DataFrame com apenas as ações que têm quantidade cadastrada
+        us_data = []
+        for ticker in US_STOCKS:
             asset_info = ASSET_QUANTITIES.get(ticker, 0)
-            # Novo formato: {"quantidade": X, "preco_entrada": Y} ou formato antigo: número
             if isinstance(asset_info, dict):
                 qty = asset_info.get("quantidade", 0)
             else:
                 qty = asset_info if asset_info else 0
-            br_data.append({"Ticker": ticker, "Quantidade": qty})
+            
+            # Só adiciona se tiver quantidade > 0
+            if qty > 0:
+                us_data.append({"Ticker": ticker, "Quantidade": qty})
+        
+        # Se não houver nenhuma, mostra uma linha vazia para começar
+        if not us_data:
+            us_data = [{"Ticker": "", "Quantidade": 0.0}]
+        
+        df_us_qty = pd.DataFrame(us_data)
+        
+        # Data editor - permite adicionar/remover linhas
+        edited_us_df = st.data_editor(
+            df_us_qty,
+            column_config={
+                "Ticker": st.column_config.TextColumn(
+                    "Ticker",
+                    help="Digite o ticker da ação (ex: AAPL, GOOGL)",
+                    required=True
+                ),
+                "Quantidade": st.column_config.NumberColumn(
+                    "Quantidade",
+                    min_value=0,
+                    step=0.000001,
+                    format="%.6f",
+                    help="Quantas ações você possui"
+                )
+            },
+            num_rows="dynamic",  # Permite adicionar/remover linhas
+            hide_index=True,
+            use_container_width=True,
+            key="qty_us_editor"
+        )
+        
+        # Armazena o DataFrame editado completo
+        st.session_state["qty_us_df"] = edited_us_df
+    
+    # --- 🇧🇷 Quantidades Brasil ---
+    with st.expander("🇧🇷 Quantidades Brasil", expanded=True):
+        st.info("💡 **Edite a tabela abaixo e clique em 'SALVAR QUANTIDADES AGORA' no final para salvar**")
+        
+        # Prepara DataFrame com apenas os FIIs que têm quantidade cadastrada
+        br_data = []
+        for ticker in BR_FIIS:
+            asset_info = ASSET_QUANTITIES.get(ticker, 0)
+            if isinstance(asset_info, dict):
+                qty = asset_info.get("quantidade", 0)
+            else:
+                qty = asset_info if asset_info else 0
+            
+            # Só adiciona se tiver quantidade > 0
+            if qty > 0:
+                br_data.append({"Ticker": ticker, "Quantidade": qty})
+        
+        # Se não houver nenhuma, mostra uma linha vazia para começar
+        if not br_data:
+            br_data = [{"Ticker": "", "Quantidade": 0.0}]
         
         df_br_qty = pd.DataFrame(br_data)
         
-        # Data editor com Ticker bloqueado
+        # Data editor - permite adicionar/remover linhas
         edited_br_df = st.data_editor(
             df_br_qty,
             column_config={
                 "Ticker": st.column_config.TextColumn(
                     "Ticker",
-                    disabled=True,
-                    help="Ticker do FII/ação"
+                    help="Digite o ticker do FII (ex: MXRF11, HGLG11)",
+                    required=True
                 ),
                 "Quantidade": st.column_config.NumberColumn(
                     "Quantidade",
@@ -864,6 +941,7 @@ with st.sidebar.expander("📊 Quantidade de Ativos (Opcional)", expanded=False)
                     help="Quantas cotas você possui"
                 )
             },
+            num_rows="dynamic",  # Permite adicionar/remover linhas
             hide_index=True,
             use_container_width=True,
             key="qty_br_editor"
@@ -871,6 +949,91 @@ with st.sidebar.expander("📊 Quantidade de Ativos (Opcional)", expanded=False)
         
         # Armazena o DataFrame editado completo
         st.session_state["qty_br_df"] = edited_br_df
+
+# --- BOTÃO PARA SALVAR APENAS QUANTIDADES ---
+with st.sidebar.expander("💾 Salvar Quantidades", expanded=False):
+    st.warning("⚠️ Use este botão para salvar APENAS as quantidades editadas nas tabelas acima")
+    
+    if st.button("💾 SALVAR QUANTIDADES AGORA", type="primary", use_container_width=True):
+        try:
+            new_asset_quantities = dict(ASSET_QUANTITIES)
+            tickers_para_buscar_preco = []
+            
+            # Processa quantidades US
+            if "qty_us_df" in st.session_state and st.session_state.qty_us_df is not None:
+                for _, row in st.session_state.qty_us_df.iterrows():
+                    ticker = str(row["Ticker"]).strip().upper()
+                    qty = row["Quantidade"]
+                    
+                    if not ticker or pd.isna(ticker) or ticker == "" or ticker == "NAN":
+                        continue
+                    
+                    if pd.notna(qty) and qty > 0:
+                        if ticker in new_asset_quantities and isinstance(new_asset_quantities[ticker], dict):
+                            new_asset_quantities[ticker]["quantidade"] = float(qty)
+                        else:
+                            new_asset_quantities[ticker] = {
+                                "quantidade": float(qty),
+                                "preco_entrada": None,
+                                "data_entrada": datetime.now().strftime("%Y-%m-%d")
+                            }
+                            tickers_para_buscar_preco.append(ticker)
+            
+            # Processa quantidades BR
+            if "qty_br_df" in st.session_state and st.session_state.qty_br_df is not None:
+                for _, row in st.session_state.qty_br_df.iterrows():
+                    ticker = str(row["Ticker"]).strip().upper()
+                    qty = row["Quantidade"]
+                    
+                    if not ticker or pd.isna(ticker) or ticker == "" or ticker == "NAN":
+                        continue
+                    
+                    if pd.notna(qty) and qty > 0:
+                        if ticker in new_asset_quantities and isinstance(new_asset_quantities[ticker], dict):
+                            new_asset_quantities[ticker]["quantidade"] = float(qty)
+                        else:
+                            new_asset_quantities[ticker] = {
+                                "quantidade": float(qty),
+                                "preco_entrada": None,
+                                "data_entrada": datetime.now().strftime("%Y-%m-%d")
+                            }
+                            tickers_para_buscar_preco.append(ticker)
+            
+            # Busca preços para novos tickers
+            if tickers_para_buscar_preco:
+                with st.spinner(f"Buscando preços para {len(tickers_para_buscar_preco)} ativo(s)..."):
+                    for ticker in tickers_para_buscar_preco:
+                        try:
+                            stock = yf.Ticker(ticker)
+                            hist = stock.history(period="1d")
+                            if not hist.empty:
+                                preco_atual = hist['Close'].iloc[-1]
+                                new_asset_quantities[ticker]["preco_entrada"] = float(preco_atual)
+                        except:
+                            new_asset_quantities[ticker]["preco_entrada"] = 0.0
+            
+            # Salva apenas as quantidades (preserva todo o resto)
+            portfolio_to_save = {
+                "US_STOCKS": US_STOCKS,
+                "BR_FIIS": BR_FIIS,
+                "TESOURO_DIRETO": TESOURO_DIRETO,
+                "ASSET_QUANTITIES": new_asset_quantities,
+                "PARAMETROS": PARAMETROS,
+                "INDIVIDUAL_MULTIPLIERS": INDIVIDUAL_MULTIPLIERS,
+                "OPERATIONS_HISTORY": OPERATIONS_HISTORY,
+                "PORTFOLIO_SNAPSHOTS": PORTFOLIO_SNAPSHOTS
+            }
+            save_user_portfolio(current_username, portfolio_to_save)
+            
+            # Atualiza variável global
+            ASSET_QUANTITIES.clear()
+            ASSET_QUANTITIES.update(new_asset_quantities)
+            
+            st.success(f"✅ {len([q for q in new_asset_quantities.values() if isinstance(q, dict) and q.get('quantidade', 0) > 0])} quantidade(s) salva(s)!")
+            st.rerun()
+            
+        except Exception as e:
+            st.error(f"❌ Erro ao salvar: {e}")
 
 # --- Registrar Operação ---
 with st.sidebar.expander("📝 Registrar Operação (Compra/Venda)", expanded=False):
@@ -954,167 +1117,6 @@ with st.sidebar.expander("📝 Registrar Operação (Compra/Venda)", expanded=Fa
             st.rerun()
         else:
             st.error("❌ Ticker é obrigatório!")
-
-if st.sidebar.button("💾 Salvar Carteira", type="primary", help="Salva sua carteira pessoal (ativos, quantidades e parâmetros). Recarrega automaticamente a página."):
-    try:
-        # Processa ações americanas
-        new_us_stocks = [line.strip() for line in us_stocks_text.split('\n') if line.strip()]
-        
-        # Processa FIIs brasileiros
-        new_br_fiis = [line.strip() for line in br_fiis_text.split('\n') if line.strip()]
-        
-        # Processa Tesouro Direto
-        new_tesouro = {}
-        for line in tesouro_text.split('\n'):
-            if '|' in line:
-                parts = line.split('|')
-                if len(parts) == 2:
-                    nome = parts[0].strip()
-                    data = parts[1].strip()
-                    new_tesouro[nome] = {'data_compra': data}
-        
-        # Processa multiplicadores individuais do text area (mantido por compatibilidade)
-        new_individual_multipliers = {}
-        for line in individual_mult_text.split('\n'):
-            line = line.strip()
-            if ':' in line:
-                try:
-                    ticker, mult = line.split(':', 1)
-                    ticker = ticker.strip().upper()
-                    mult = float(mult.strip())
-                    if mult > 0:  # Valida multiplicador positivo
-                        new_individual_multipliers[ticker] = mult
-                except ValueError:
-                    st.sidebar.warning(f"⚠️ Linha ignorada (formato inválido): {line}")
-        
-        # Captura edições das tabelas (prioridade sobre text area)
-        if "edited_us" in st.session_state and st.session_state["edited_us"] is not None:
-            try:
-                for _, row in st.session_state["edited_us"].iterrows():
-                    ticker = row["Ticker"]
-                    mult = row.get("ATR Mult.")
-                    if pd.notna(mult) and mult > 0:
-                        new_individual_multipliers[ticker] = float(mult)
-            except (KeyError, AttributeError) as e:
-                pass  # Tabela ainda não foi renderizada ou não tem ATR Mult.
-        
-        if "edited_br" in st.session_state and st.session_state["edited_br"] is not None:
-            try:
-                for _, row in st.session_state["edited_br"].iterrows():
-                    ticker = row["Ticker"]
-                    mult = row.get("ATR Mult.")
-                    if pd.notna(mult) and mult > 0:
-                        new_individual_multipliers[ticker] = float(mult)
-            except (KeyError, AttributeError) as e:
-                pass  # Tabela ainda não foi renderizada ou não tem ATR Mult.
-        
-        # Processa quantidades de ativos - NOVA LÓGICA COM DATA_EDITOR
-        # Estrutura: {"AAPL": {"quantidade": 1.5, "preco_entrada": 259.5, "data_entrada": "2026-02-01"}}
-        new_asset_quantities = {}
-        
-        # Carrega quantidades antigas para preservar preços de entrada
-        old_asset_quantities = user_portfolio.get("ASSET_QUANTITIES", {})
-        
-        # Combina quantidades de US e BR dos data_editors
-        tickers_para_buscar_preco = []
-        
-        if "qty_us_df" in st.session_state and st.session_state.qty_us_df is not None:
-            try:
-                for _, row in st.session_state.qty_us_df.iterrows():
-                    ticker = row["Ticker"]
-                    qty = row["Quantidade"]
-                    if pd.notna(qty) and qty > 0:
-                        # Se já existe, preserva o preço de entrada
-                        if ticker in old_asset_quantities and isinstance(old_asset_quantities[ticker], dict):
-                            new_asset_quantities[ticker] = old_asset_quantities[ticker].copy()
-                            new_asset_quantities[ticker]["quantidade"] = float(qty)
-                        elif ticker in old_asset_quantities:
-                            # Migração: formato antigo (só número) para novo formato
-                            new_asset_quantities[ticker] = {
-                                "quantidade": float(qty),
-                                "preco_entrada": None,  # Será preenchido
-                                "data_entrada": datetime.now().strftime("%Y-%m-%d")
-                            }
-                            tickers_para_buscar_preco.append(ticker)
-                        else:
-                            # Novo ticker: precisa buscar preço atual
-                            new_asset_quantities[ticker] = {
-                                "quantidade": float(qty),
-                                "preco_entrada": None,  # Será preenchido
-                                "data_entrada": datetime.now().strftime("%Y-%m-%d")
-                            }
-                            tickers_para_buscar_preco.append(ticker)
-            except (KeyError, AttributeError, ValueError) as e:
-                st.sidebar.warning(f"⚠️ Erro ao processar quantidades US: {e}")
-        
-        if "qty_br_df" in st.session_state and st.session_state.qty_br_df is not None:
-            try:
-                for _, row in st.session_state.qty_br_df.iterrows():
-                    ticker = row["Ticker"]
-                    qty = row["Quantidade"]
-                    if pd.notna(qty) and qty > 0:
-                        # Mesma lógica para BR
-                        if ticker in old_asset_quantities and isinstance(old_asset_quantities[ticker], dict):
-                            new_asset_quantities[ticker] = old_asset_quantities[ticker].copy()
-                            new_asset_quantities[ticker]["quantidade"] = float(qty)
-                        elif ticker in old_asset_quantities:
-                            new_asset_quantities[ticker] = {
-                                "quantidade": float(qty),
-                                "preco_entrada": None,
-                                "data_entrada": datetime.now().strftime("%Y-%m-%d")
-                            }
-                            tickers_para_buscar_preco.append(ticker)
-                        else:
-                            new_asset_quantities[ticker] = {
-                                "quantidade": float(qty),
-                                "preco_entrada": None,
-                                "data_entrada": datetime.now().strftime("%Y-%m-%d")
-                            }
-                            tickers_para_buscar_preco.append(ticker)
-            except (KeyError, AttributeError, ValueError) as e:
-                st.sidebar.warning(f"⚠️ Erro ao processar quantidades BR: {e}")
-        
-        # Busca preços atuais para novos tickers
-        if tickers_para_buscar_preco:
-            st.sidebar.info(f"📊 Capturando preços de entrada para {len(tickers_para_buscar_preco)} ativo(s)...")
-            for ticker in tickers_para_buscar_preco:
-                try:
-                    stock = yf.Ticker(ticker)
-                    hist = stock.history(period="1d")
-                    if not hist.empty:
-                        preco_atual = hist['Close'].iloc[-1]
-                        new_asset_quantities[ticker]["preco_entrada"] = float(preco_atual)
-                        st.sidebar.success(f"✅ {ticker}: R${preco_atual:.2f}")
-                except Exception as e:
-                    st.sidebar.error(f"❌ Erro ao buscar preço de {ticker}: {e}")
-                    new_asset_quantities[ticker]["preco_entrada"] = 0.0
-        
-        # Cria o objeto de carteira do usuário
-        user_portfolio = {
-            "US_STOCKS": new_us_stocks,
-            "BR_FIIS": new_br_fiis,
-            "TESOURO_DIRETO": new_tesouro,
-            "PARAMETROS": {
-                "MULTIPLIER_US": mult_us,
-                "MULTIPLIER_BR": mult_br
-            },
-            "INDIVIDUAL_MULTIPLIERS": new_individual_multipliers,
-            "ASSET_QUANTITIES": new_asset_quantities
-        }
-        
-        # Salva a carteira específica deste usuário
-        save_user_portfolio(current_username, user_portfolio)
-        
-        st.sidebar.success("✅ Sua carteira foi salva!")
-        
-        # Mostra o que foi salvo
-        if new_asset_quantities:
-            st.sidebar.info(f"📊 {len(new_asset_quantities)} quantidade(s) salva(s)")
-        
-        st.rerun()  # Recarrega para aplicar as novas quantidades
-        
-    except Exception as e:
-        st.sidebar.error(f"❌ Erro ao salvar: {e}")
 
 # --- Funções de Cálculo ---
 
