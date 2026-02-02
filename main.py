@@ -2203,6 +2203,15 @@ if BR_FIIS:
                 st.error(f"❌ {ticker}: NÃO encontrado em ASSET_QUANTITIES")
     
     df_br = get_market_data(BR_FIIS, mult_br, individual_multipliers=INDIVIDUAL_MULTIPLIERS, asset_quantities=ASSET_QUANTITIES)
+    
+    # DEBUG: Mostra o DataFrame IMEDIATAMENTE após get_market_data
+    with st.expander("🐛 DEBUG: DataFrame LOGO APÓS get_market_data", expanded=True):
+        st.write("**df_br completo:**")
+        st.dataframe(df_br[["Ticker", "Qtd", "Preço Entrada", "Realizado ($)"]])
+        st.write("**Valores únicos na coluna Qtd:**")
+        st.json(df_br["Qtd"].unique().tolist())
+        st.write(f"**Teste: any(df_br['Qtd'] != '-') = {any(df_br['Qtd'] != '-')}**")
+    
     if not df_br.empty:
         # === PAINEL DE PRIORIDADES DE VENDA BR ===
         st.markdown("---")
