@@ -720,57 +720,255 @@ with st.sidebar.expander("🇧🇷 FIIs Brasileiros", expanded=False):
         st.rerun()
 
 with st.sidebar.expander("💰 Tesouro Direto", expanded=False):
-    st.markdown("**Formato:** Nome | Data de Compra")
-    st.caption("Exemplo: Tesouro Selic 2027 | 2024-02-15")
+    st.caption("👇 Importe múltiplos títulos de uma vez")
     
-    tesouro_lines = []
-    for nome, dados in TESOURO_DIRETO.items():
-        tesouro_lines.append(f"{nome} | {dados['data_compra']}")
-    
-    tesouro_text = st.text_area(
-        "Um título por linha",
-        value="\n".join(tesouro_lines),
-        height=100,
-        key="tesouro",
-        help="""💰 **Como preencher:**
-        
-        Formato: Nome do Título | Data de Compra (AAAA-MM-DD)
-        
-        Exemplos:
-        • Tesouro Selic 2027 | 2024-02-15
-        • Tesouro IPCA+ 2035 | 2023-01-10
-        • Tesouro Prefixado 2029 | 2024-08-20
-        
-        O sistema calculará automaticamente a alíquota de IR e recomendará o melhor momento de venda."""
+    # Opção de importação
+    import_method = st.radio(
+        "Método de cadastro:",
+        ["📋 Colar do Excel/Corretora", "📊 Tabela Editável", "📁 Upload CSV"],
+        key="tesouro_method"
     )
     
-    st.markdown("---")
-    
-    if st.button("💾 Salvar Tesouro Direto", key="save_tesouro", type="primary", use_container_width=True):
-        new_tesouro = {}
-        for line in tesouro_text.split('\n'):
-            if '|' in line:
-                parts = line.split('|')
-                if len(parts) == 2:
-                    nome = parts[0].strip()
-                    data = parts[1].strip()
-                    new_tesouro[nome] = {'data_compra': data}
+    if import_method == "📋 Colar do Excel/Corretora":
+        st.info("""
+        **Como usar:**
+        1. Copie os dados da sua corretora ou planilha
+        2. Cole no campo abaixo
+        3. Formato: `Nome do Título | Data (AAAA-MM-DD) | Valor Investido (opcional)`
         
-        portfolio_to_save = {
-            "US_STOCKS": US_STOCKS,
-            "BR_FIIS": BR_FIIS,
-            "TESOURO_DIRETO": new_tesouro,
-            "ASSET_QUANTITIES": ASSET_QUANTITIES,
-            "PARAMETROS": PARAMETROS,
-            "INDIVIDUAL_MULTIPLIERS": INDIVIDUAL_MULTIPLIERS,
-            "OPERATIONS_HISTORY": OPERATIONS_HISTORY,
-            "PORTFOLIO_SNAPSHOTS": PORTFOLIO_SNAPSHOTS
-        }
-        save_user_portfolio(current_username, portfolio_to_save)
-        TESOURO_DIRETO.clear()
-        TESOURO_DIRETO.update(new_tesouro)
-        st.success("✅ Tesouro Direto salvo!")
-        st.rerun()
+        **Aceita:**
+        - Separado por vírgula, ponto-e-vírgula ou tab
+        - Com ou sem cabeçalho
+        """)
+        
+        bulk_text = st.text_area(
+            "Cole seus títulos aqui (um por linha):",
+            height=150,
+            placeholder="""Tesouro Selic 2027 | 2024-02-15 | 1000
+Tesouro IPCA+ 2035 | 2023-01-10 | 5000
+Tesouro Prefixado 2029 | 2024-08-20 | 2000""",
+            key="tesouro_bulk"
+        )
+        
+        if st.button("📥 Importar Títulos", key="import_tesouro_bulk", type="primary", use_container_width=True):
+            if bulk_text:
+                new_tesouro = {}
+                lines_processed = 0
+                errors = []
+                
+                for line in bulk_text.split('\n'):
+                    line = line.strip()
+                    if not line or line.lower().startswith('nome'):  # Pula linhas vazias e cabeçalhos
+                        continue
+                    
+                    # Tenta diferentes separadores
+                    parts = None
+                    for sep in ['|', ';', ',', '\t']:
+                        if sep in line:
+                            parts = [p.strip() for p in line.split(sep)]
+                            break
+                    
+                    if parts and len(parts) >= 2:
+                        nome = parts[0]
+                        data = parts[1]
+                        valor = parts[2] if len(parts) > 2 else "0"
+                        
+                        try:
+                            # Valida data (formato AAAA-MM-DD ou DD/MM/AAAA)
+                            if '/' in data:
+                                # Converte DD/MM/AAAA para AAAA-MM-DD
+                                d, m, a = data.split('/')
+                                data = f"{a}-{m.zfill(2)}-{d.zfill(2)}"
+                            
+                            new_tesouro[nome] = {
+                                'data_compra': data,
+                                'valor_investido': float(valor.replace('R$', '').replace('.', '').replace(',', '.').strip()) if valor != "0" else 0
+                            }
+                            lines_processed += 1
+                        except Exception as e:
+                            errors.append(f"Linha '{line}': {str(e)}")
+                    else:
+                        errors.append(f"Formato inválido: {line}")
+                
+                if new_tesouro:
+                    portfolio_to_save = {
+                        "US_STOCKS": US_STOCKS,
+                        "BR_FIIS": BR_FIIS,
+                        "TESOURO_DIRETO": new_tesouro,
+                        "ASSET_QUANTITIES": ASSET_QUANTITIES,
+                        "PARAMETROS": PARAMETROS,
+                        "INDIVIDUAL_MULTIPLIERS": INDIVIDUAL_MULTIPLIERS,
+                        "OPERATIONS_HISTORY": OPERATIONS_HISTORY,
+                        "PORTFOLIO_SNAPSHOTS": PORTFOLIO_SNAPSHOTS
+                    }
+                    save_user_portfolio(current_username, portfolio_to_save)
+                    TESOURO_DIRETO.clear()
+                    TESOURO_DIRETO.update(new_tesouro)
+                    st.success(f"✅ {lines_processed} título(s) importado(s)!")
+                    if errors:
+                        with st.expander("⚠️ Linhas com erro"):
+                            for err in errors:
+                                st.warning(err)
+                    st.rerun()
+                else:
+                    st.error("❌ Nenhum título válido encontrado")
+            else:
+                st.warning("⚠️ Cole os dados dos títulos primeiro")
+    
+    elif import_method == "📊 Tabela Editável":
+        st.info("💡 **Clique no + para adicionar linhas. Delete linhas não usadas.**")
+        
+        # Prepara dados existentes
+        tesouro_data = []
+        for nome, dados in TESOURO_DIRETO.items():
+            tesouro_data.append({
+                "Nome do Título": nome,
+                "Data Compra": dados['data_compra'],
+                "Valor Investido": dados.get('valor_investido', 0)
+            })
+        
+        # Se não houver nenhum, adiciona 3 linhas vazias
+        if not tesouro_data:
+            tesouro_data = [
+                {"Nome do Título": "", "Data Compra": "2024-01-01", "Valor Investido": 0},
+                {"Nome do Título": "", "Data Compra": "2024-01-01", "Valor Investido": 0},
+                {"Nome do Título": "", "Data Compra": "2024-01-01", "Valor Investido": 0}
+            ]
+        
+        df_tesouro = pd.DataFrame(tesouro_data)
+        
+        edited_tesouro = st.data_editor(
+            df_tesouro,
+            column_config={
+                "Nome do Título": st.column_config.TextColumn(
+                    "Nome do Título",
+                    help="Ex: Tesouro Selic 2027, Tesouro IPCA+ 2035",
+                    required=True
+                ),
+                "Data Compra": st.column_config.DateColumn(
+                    "Data Compra",
+                    format="DD/MM/YYYY",
+                    help="Data que você comprou o título"
+                ),
+                "Valor Investido": st.column_config.NumberColumn(
+                    "Valor Investido (R$)",
+                    min_value=0,
+                    format="R$ %.2f",
+                    help="Opcional: quanto você investiu"
+                )
+            },
+            num_rows="dynamic",
+            hide_index=True,
+            use_container_width=True,
+            key="tesouro_editor"
+        )
+        
+        if st.button("💾 Salvar Tesouro Direto", key="save_tesouro_table", type="primary", use_container_width=True):
+            new_tesouro = {}
+            for _, row in edited_tesouro.iterrows():
+                nome = str(row["Nome do Título"]).strip()
+                if nome and nome.upper() != "NAN":
+                    data = row["Data Compra"]
+                    # Converte datetime para string se necessário
+                    if hasattr(data, 'strftime'):
+                        data = data.strftime("%Y-%m-%d")
+                    
+                    new_tesouro[nome] = {
+                        'data_compra': str(data),
+                        'valor_investido': float(row["Valor Investido"]) if pd.notna(row["Valor Investido"]) else 0
+                    }
+            
+            if new_tesouro:
+                portfolio_to_save = {
+                    "US_STOCKS": US_STOCKS,
+                    "BR_FIIS": BR_FIIS,
+                    "TESOURO_DIRETO": new_tesouro,
+                    "ASSET_QUANTITIES": ASSET_QUANTITIES,
+                    "PARAMETROS": PARAMETROS,
+                    "INDIVIDUAL_MULTIPLIERS": INDIVIDUAL_MULTIPLIERS,
+                    "OPERATIONS_HISTORY": OPERATIONS_HISTORY,
+                    "PORTFOLIO_SNAPSHOTS": PORTFOLIO_SNAPSHOTS
+                }
+                save_user_portfolio(current_username, portfolio_to_save)
+                TESOURO_DIRETO.clear()
+                TESOURO_DIRETO.update(new_tesouro)
+                st.success(f"✅ {len(new_tesouro)} título(s) salvo(s)!")
+                st.rerun()
+            else:
+                st.warning("⚠️ Preencha pelo menos um título")
+    
+    else:  # Upload CSV
+        st.info("""
+        **Formato do CSV:**
+        ```
+        Nome,Data,Valor
+        Tesouro Selic 2027,2024-02-15,1000
+        Tesouro IPCA+ 2035,2023-01-10,5000
+        ```
+        """)
+        
+        uploaded_file = st.file_uploader(
+            "Escolha um arquivo CSV",
+            type=['csv', 'txt'],
+            key="tesouro_csv"
+        )
+        
+        if uploaded_file:
+            try:
+                # Tenta ler CSV
+                df_upload = pd.read_csv(uploaded_file, sep=None, engine='python')
+                
+                st.write("**Preview dos dados:**")
+                st.dataframe(df_upload.head(), use_container_width=True)
+                
+                if st.button("📥 Importar do CSV", key="import_csv", type="primary", use_container_width=True):
+                    new_tesouro = {}
+                    
+                    # Detecta colunas (flexível com nomes diferentes)
+                    col_nome = None
+                    col_data = None
+                    col_valor = None
+                    
+                    for col in df_upload.columns:
+                        col_lower = col.lower()
+                        if 'nome' in col_lower or 'titulo' in col_lower or 'título' in col_lower:
+                            col_nome = col
+                        elif 'data' in col_lower:
+                            col_data = col
+                        elif 'valor' in col_lower or 'investido' in col_lower:
+                            col_valor = col
+                    
+                    if col_nome and col_data:
+                        for _, row in df_upload.iterrows():
+                            nome = str(row[col_nome]).strip()
+                            data = str(row[col_data])
+                            valor = float(row[col_valor]) if col_valor and pd.notna(row[col_valor]) else 0
+                            
+                            new_tesouro[nome] = {
+                                'data_compra': data,
+                                'valor_investido': valor
+                            }
+                        
+                        portfolio_to_save = {
+                            "US_STOCKS": US_STOCKS,
+                            "BR_FIIS": BR_FIIS,
+                            "TESOURO_DIRETO": new_tesouro,
+                            "ASSET_QUANTITIES": ASSET_QUANTITIES,
+                            "PARAMETROS": PARAMETROS,
+                            "INDIVIDUAL_MULTIPLIERS": INDIVIDUAL_MULTIPLIERS,
+                            "OPERATIONS_HISTORY": OPERATIONS_HISTORY,
+                            "PORTFOLIO_SNAPSHOTS": PORTFOLIO_SNAPSHOTS
+                        }
+                        save_user_portfolio(current_username, portfolio_to_save)
+                        TESOURO_DIRETO.clear()
+                        TESOURO_DIRETO.update(new_tesouro)
+                        st.success(f"✅ {len(new_tesouro)} título(s) importado(s)!")
+                        st.rerun()
+                    else:
+                        st.error("❌ CSV deve ter colunas 'Nome' e 'Data'")
+                        
+            except Exception as e:
+                st.error(f"❌ Erro ao ler CSV: {e}")
 
 # --- Modo Debug ---
 st.sidebar.markdown("---")
