@@ -2036,93 +2036,114 @@ if ASSET_QUANTITIES:
         st.markdown("---")
         st.header("💰 Resumo da Carteira")
         
-        df_combined = pd.concat(dfs_to_combine, ignore_index=True)
+        # Separa por moeda
+        df_us_filtered = df_us[df_us["Qtd"] != "-"].copy() if US_STOCKS and 'df_us' in locals() and not df_us.empty else pd.DataFrame()
+        df_br_filtered = df_br[df_br["Qtd"] != "-"].copy() if BR_FIIS and 'df_br' in locals() and not df_br.empty else pd.DataFrame()
         
-        # Filtra apenas ativos com quantidade
-        df_with_qty = df_combined[df_combined["Qtd"] != "-"].copy()
+        # Calcula totais por moeda
+        total_usd = 0
+        total_realizado_usd = 0
+        total_gain_usd = 0
+        total_loss_usd = 0
         
-        if not df_with_qty.empty:
-            # Calcula totais
-            total_invested = df_with_qty["Valor Posição"].sum()
-            total_realizado = df_with_qty["Realizado ($)"].sum()
-            total_gain_if_target = df_with_qty["Projeção Alvo ($)"].sum()
-            total_loss_if_stop = df_with_qty["Projeção Stop ($)"].sum()
+        total_brl = 0
+        total_realizado_brl = 0
+        total_gain_brl = 0
+        total_loss_brl = 0
+        
+        if not df_us_filtered.empty:
+            total_usd = df_us_filtered["Valor Posição"].sum()
+            total_realizado_usd = df_us_filtered["Realizado ($)"].sum()
+            total_gain_usd = df_us_filtered["Projeção Alvo ($)"].sum()
+            total_loss_usd = df_us_filtered["Projeção Stop ($)"].sum()
+        
+        if not df_br_filtered.empty:
+            total_brl = df_br_filtered["Valor Posição"].sum()
+            total_realizado_brl = df_br_filtered["Realizado ($)"].sum()
+            total_gain_brl = df_br_filtered["Projeção Alvo ($)"].sum()
+            total_loss_brl = df_br_filtered["Projeção Stop ($)"].sum()
+        
+        # Exibe resumo por moeda
+        if total_usd > 0 or total_brl > 0:
+            # Resumo USD (Ações Americanas)
+            if total_usd > 0:
+                st.subheader("🇺🇸 Ativos em Dólar (USD)")
+                col1, col2, col3, col4 = st.columns(4)
+                
+                with col1:
+                    st.metric(
+                        label="📊 Valor Total",
+                        value=f"${total_usd:,.2f}",
+                        help="Soma das posições em USD"
+                    )
+                
+                with col2:
+                    perc_usd = (total_realizado_usd / total_usd * 100) if total_usd > 0 else 0
+                    st.metric(
+                        label="💰 Realizado",
+                        value=f"${total_realizado_usd:,.2f}",
+                        delta=f"{perc_usd:+.2f}%",
+                        help="Ganho/Perda desde a entrada"
+                    )
+                
+                with col3:
+                    st.metric(
+                        label="🎯 Se atingir alvos",
+                        value=f"${total_gain_usd:,.2f}",
+                        delta=f"+{(total_gain_usd/total_usd)*100:.1f}%" if total_usd > 0 else "0%",
+                        help="Lucro potencial"
+                    )
+                
+                with col4:
+                    st.metric(
+                        label="🛑 Se acionar stops",
+                        value=f"${total_loss_usd:,.2f}",
+                        delta=f"-{(total_loss_usd/total_usd)*100:.1f}%" if total_usd > 0 else "0%",
+                        delta_color="inverse",
+                        help="Perda potencial"
+                    )
+                
+                st.markdown("---")
             
-            # Percentual realizado
-            if total_invested > 0:
-                perc_realizado = (total_realizado / total_invested) * 100
-            else:
-                perc_realizado = 0
-            
-            # Relação risco/retorno
-            if total_loss_if_stop > 0:
-                risk_reward_ratio = total_gain_if_target / total_loss_if_stop
-            else:
-                risk_reward_ratio = 0
-            
-            # Exibe resumo em colunas
-            col1, col2, col3, col4, col5 = st.columns(5)
-            
-            with col1:
-                st.metric(
-                    label="📊 Valor Total Posição",
-                    value=f"${total_invested:,.0f}" if US_STOCKS else f"R$ {total_invested:,.0f}",
-                    help="Soma do valor atual de todas as posições"
-                )
-            
-            with col2:
-                st.metric(
-                    label="💰 Realizado",
-                    value=f"${total_realizado:,.2f}" if US_STOCKS else f"R$ {total_realizado:,.2f}",
-                    delta=f"{perc_realizado:+.2f}%",
-                    help="Ganho/Perda real desde suas entradas"
-                )
-            
-            with col3:
-                st.metric(
-                    label="🎯 Projeção Alvo",
-                    value=f"${total_gain_if_target:,.0f}" if US_STOCKS else f"R$ {total_gain_if_target:,.0f}",
-                    delta=f"+{(total_gain_if_target/total_invested)*100:.1f}%",
-                    help="Lucro se todos os ativos atingirem seus alvos"
-                )
-            
-            with col4:
-                st.metric(
-                    label="🛑 Projeção Stop",
-                    value=f"${total_loss_if_stop:,.0f}" if US_STOCKS else f"R$ {total_loss_if_stop:,.0f}",
-                    delta=f"-{(total_loss_if_stop/total_invested)*100:.1f}%",
-                    delta_color="inverse",
-                    help="Perda se todos os stops forem acionados"
-                )
-            
-            with col5:
-                st.metric(
-                    label="📈 Risco/Retorno",
-                    value=f"{risk_reward_ratio:.2f}:1",
-                    help="Quanto você pode ganhar para cada $1 de risco"
-                )
-            
-            st.info("💡 **Dica:** Uma relação risco/retorno > 2:1 é considerada boa para swing trading.")
-            
-            # Gráfico de Realizado vs Projetado
-            st.markdown("---")
-            st.subheader("📊 Visualização: Realizado vs Projetado")
-            
-            import plotly.graph_objects as go
-            
-            fig = go.Figure()
-            
-            # Barra 1: Valor da Posição (base)
-            fig.add_trace(go.Bar(
-                name='Valor Posição',
-                x=['Carteira'],
-                y=[total_invested],
-                marker_color='lightblue',
-                text=[f"${total_invested:,.0f}" if US_STOCKS else f"R$ {total_invested:,.0f}"],
-                textposition='inside'
-            ))
-            
-            # Barra 2: Realizado (verde se positivo, vermelho se negativo)
+            # Resumo BRL (FIIs Brasileiros)
+            if total_brl > 0:
+                st.subheader("🇧🇷 Ativos em Real (BRL)")
+                col1, col2, col3, col4 = st.columns(4)
+                
+                with col1:
+                    st.metric(
+                        label="📊 Valor Total",
+                        value=f"R$ {total_brl:,.2f}",
+                        help="Soma das posições em BRL"
+                    )
+                
+                with col2:
+                    perc_brl = (total_realizado_brl / total_brl * 100) if total_brl > 0 else 0
+                    st.metric(
+                        label="💰 Realizado",
+                        value=f"R$ {total_realizado_brl:,.2f}",
+                        delta=f"{perc_brl:+.2f}%",
+                        help="Ganho/Perda desde a entrada"
+                    )
+                
+                with col3:
+                    st.metric(
+                        label="🎯 Se atingir alvos",
+                        value=f"R$ {total_gain_brl:,.2f}",
+                        delta=f"+{(total_gain_brl/total_brl)*100:.1f}%" if total_brl > 0 else "0%",
+                        help="Lucro potencial"
+                    )
+                
+                with col4:
+                    st.metric(
+                        label="🛑 Se acionar stops",
+                        value=f"R$ {total_loss_brl:,.2f}",
+                        delta=f"-{(total_loss_brl/total_brl)*100:.1f}%" if total_brl > 0 else "0%",
+                        delta_color="inverse",
+                        help="Perda potencial"
+                    )
+        else:
+            st.info("💡 Cadastre quantidades para ver o resumo financeiro")
             fig.add_trace(go.Bar(
                 name='Realizado',
                 x=['Carteira'],
