@@ -2188,6 +2188,20 @@ st.subheader("🇧🇷 FIIs Brasileiros")
 st.caption("💡 **Dica:** RSI > 70 ativa stop automático em 1.0x ATR (proteção de lucro). Edite 'ATR Mult.' para personalizar.")
 if BR_FIIS:
     st.caption(f"📊 Analisando {len(BR_FIIS)} ticker(s): {', '.join(BR_FIIS)}")
+    
+    # DEBUG: Mostra quantidades que serão passadas
+    with st.expander("🐛 DEBUG: ASSET_QUANTITIES passado para get_market_data", expanded=True):
+        st.write("**BR_FIIS (lista de tickers):**")
+        st.json(BR_FIIS)
+        st.write("**ASSET_QUANTITIES (dict completo):**")
+        st.json(ASSET_QUANTITIES)
+        st.write("**Matching entre BR_FIIS e ASSET_QUANTITIES:**")
+        for ticker in BR_FIIS:
+            if ticker in ASSET_QUANTITIES:
+                st.success(f"✅ {ticker}: {ASSET_QUANTITIES[ticker]}")
+            else:
+                st.error(f"❌ {ticker}: NÃO encontrado em ASSET_QUANTITIES")
+    
     df_br = get_market_data(BR_FIIS, mult_br, individual_multipliers=INDIVIDUAL_MULTIPLIERS, asset_quantities=ASSET_QUANTITIES)
     if not df_br.empty:
         # === PAINEL DE PRIORIDADES DE VENDA BR ===
