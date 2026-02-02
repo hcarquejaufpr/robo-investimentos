@@ -182,23 +182,30 @@ def save_user_portfolio(username, portfolio):
     return db.save_user_portfolio(username, portfolio)
 
 def adicionar_estrategias_tesouro(tesouro_dict):
-    """Adiciona estratégias de venda aos títulos do Tesouro Direto."""
+    """Adiciona estratégias de venda aos títulos do Tesouro Direto - SAÍDA EM 3-4 SEMANAS."""
     
     if not tesouro_dict or not isinstance(tesouro_dict, dict):
         return tesouro_dict
     
     ESTRATEGIAS = {
-        "Tesouro Selic 2026": {"acao": "VENDA_PARCIAL_SE_NECESSARIO", "percentual_venda": 30, "gatilho": "Liquidez necessária ou rentabilidade atingir 40%", "motivo": "Rentabilidade de +34.72%. Manter 70% até vencimento, pode vender 30% se precisar de liquidez.", "prioridade": 3, "risco": "BAIXO"},
-        "Tesouro Selic 2027": {"acao": "MANTER_ATE_VENCIMENTO", "percentual_venda": 0, "gatilho": "Só vender em emergência extrema", "motivo": "MELHOR PERFORMANCE (+70.25%)! Maior posição da carteira. Manter até vencimento para maximizar ganhos.", "prioridade": 1, "risco": "BAIXO"},
-        "Tesouro Selic 2029": {"acao": "MANTER", "percentual_venda": 0, "gatilho": "N/A", "motivo": "Rentabilidade de +34.22%. Posição pequena, manter como reserva de longo prazo.", "prioridade": 2, "risco": "BAIXO"},
-        "Tesouro Prefixado 2026": {"acao": "VENDER_SE_JUROS_SUBIREM", "percentual_venda": 100, "gatilho": "Se Selic subir para 12%+", "motivo": "Vence em 1 mês. Rentabilidade +27.28%. Liquidar para realocar se juros subirem.", "prioridade": 4, "risco": "BAIXO"},
-        "Tesouro Prefixado 2028": {"acao": "MANTER_MONITORAR", "percentual_venda": 50, "gatilho": "Se Selic > 13% ou rentabilidade < 0%", "motivo": "Rentabilidade baixa (+6.49%). Vender 50% se juros subirem muito, manter 50% até vencimento.", "prioridade": 6, "risco": "MEDIO"},
-        "Tesouro Prefixado 2029": {"acao": "MANTER", "percentual_venda": 0, "gatilho": "N/A", "motivo": "Rentabilidade boa (+26.29%). Posição pequena, manter.", "prioridade": 3, "risco": "MEDIO"},
-        "Tesouro Prefixado com Juros Semestrais 2033": {"acao": "MANTER_ATE_VENCIMENTO", "percentual_venda": 0, "gatilho": "NÃO VENDER", "motivo": "Rentabilidade negativa (-6.51%) é marcação a mercado. Vender cristaliza prejuízo. MANTER até vencimento + receber cupons semestrais.", "prioridade": 1, "risco": "MEDIO", "cupons": True},
-        "Tesouro IPCA+ 2045": {"acao": "MANTER_ATE_VENCIMENTO", "percentual_venda": 0, "gatilho": "NÃO VENDER", "motivo": "Proteção contra inflação longo prazo. Rentabilidade +2.27%, posição pequena.", "prioridade": 2, "risco": "ALTO"},
-        "Tesouro IPCA+ com Juros Semestrais 2035": {"acao": "MANTER_ATE_VENCIMENTO", "percentual_venda": 0, "gatilho": "NÃO VENDER", "motivo": "Rentabilidade negativa (-1.17%) é marcação a mercado. Receber cupons semestrais + correção IPCA.", "prioridade": 1, "risco": "MEDIO", "cupons": True},
-        "Tesouro IPCA+ com Juros Semestrais 2040": {"acao": "MANTER_ATE_VENCIMENTO", "percentual_venda": 0, "gatilho": "NÃO VENDER", "motivo": "Rentabilidade negativa (-7.26%) é marcação a mercado. Vender cristaliza prejuízo de R$ 700+. Manter até vencimento + receber cupons.", "prioridade": 1, "risco": "ALTO", "cupons": True},
-        "Tesouro IPCA+ com Juros Semestrais 2055": {"acao": "MANTER_ATE_VENCIMENTO", "percentual_venda": 0, "gatilho": "NÃO VENDER", "motivo": "MAIOR PREJUÍZO MARCADO (-17.71% = -R$ 2.660). Vender seria erro fatal. Manter para recuperar + receber cupons semestrais por 29 anos.", "prioridade": 1, "risco": "ALTO", "cupons": True}
+        # SEMANA 1-2: Vencer em breve + Alta rentabilidade garantida
+        "Tesouro Prefixado 2026": {"acao": "VENDER_SEMANA_1", "percentual_venda": 100, "gatilho": "Dias 1-7", "motivo": "🟢 Vence em 1 mês (+27.28%). Liquidez imediata sem prejuízo. VENDER PRIMEIRO.", "prioridade": 1, "risco": "BAIXO", "semana": 1},
+        "Tesouro Selic 2026": {"acao": "VENDER_SEMANA_1", "percentual_venda": 100, "gatilho": "Dias 1-7", "motivo": "🟢 Rentabilidade +34.72%, sem risco de mercado. Liquidez D+1. VENDER PRIMEIRO.", "prioridade": 1, "risco": "BAIXO", "semana": 1},
+        
+        # SEMANA 2: Lucros altos, liquidez boa
+        "Tesouro Selic 2027": {"acao": "VENDER_SEMANA_2", "percentual_venda": 100, "gatilho": "Dias 8-14", "motivo": "🟢 MELHOR PERFORMANCE (+70.25%)! Sem risco de mercado, realiza máximo lucro.", "prioridade": 2, "risco": "BAIXO", "semana": 2},
+        "Tesouro Selic 2029": {"acao": "VENDER_SEMANA_2", "percentual_venda": 100, "gatilho": "Dias 8-14", "motivo": "🟢 Rentabilidade +34.22%. Posição pequena, sem risco de mercado.", "prioridade": 2, "risco": "BAIXO", "semana": 2},
+        "Tesouro Prefixado 2029": {"acao": "VENDER_SEMANA_2", "percentual_venda": 100, "gatilho": "Dias 8-14", "motivo": "🟢 Rentabilidade boa (+26.29%). Lucro garantido, vender cedo.", "prioridade": 2, "risco": "MEDIO", "semana": 2},
+        
+        # SEMANA 3: Lucros baixos, monitorar recuperação
+        "Tesouro Prefixado 2028": {"acao": "VENDER_SEMANA_3", "percentual_venda": 100, "gatilho": "Dias 15-21", "motivo": "🟡 Rentabilidade baixa (+6.49%). Ainda positivo, vender antes da última semana.", "prioridade": 3, "risco": "MEDIO", "semana": 3},
+        "Tesouro IPCA+ 2045": {"acao": "VENDER_SEMANA_3", "percentual_venda": 100, "gatilho": "Dias 15-21", "motivo": "🟡 Rentabilidade mínima (+2.27%). Quase zero, vender logo.", "prioridade": 3, "risco": "ALTO", "semana": 3},
+        
+        # SEMANA 4 (ou FINAL da Semana 3): Prejuízos - Dar tempo máximo para recuperar
+        "Tesouro IPCA+ com Juros Semestrais 2035": {"acao": "VENDER_SEMANA_4_INICIO", "percentual_venda": 100, "gatilho": "Dias 22-24 (verificar cupom)", "motivo": "🔴 Prejuízo -1.17%. TEM CUPONS. Verificar data do próximo cupom antes de vender!", "prioridade": 4, "risco": "MEDIO", "cupons": True, "semana": 4},
+        "Tesouro Prefixado com Juros Semestrais 2033": {"acao": "VENDER_SEMANA_4_MEIO", "percentual_venda": 100, "gatilho": "Dias 25-26 (verificar cupom)", "motivo": "🔴 Prejuízo -6.51%. TEM CUPONS. Se cupom próximo, aguardar recebimento.", "prioridade": 5, "risco": "MEDIO", "cupons": True, "semana": 4},
+        "Tesouro IPCA+ com Juros Semestrais 2040": {"acao": "VENDER_SEMANA_4_FINAL", "percentual_venda": 100, "gatilho": "Dia 27 (penúltimo dia)", "motivo": "🔴🔴 Prejuízo -7.26% (~R$ 700). TEM CUPONS. Dar tempo para recuperar, mas não deixar para última hora.", "prioridade": 6, "risco": "ALTO", "cupons": True, "semana": 4},
+        "Tesouro IPCA+ com Juros Semestrais 2055": {"acao": "VENDER_ULTIMO_DIA", "percentual_venda": 100, "gatilho": "Dia 28 (ÚLTIMO DIA possível)", "motivo": "🔴🔴🔴 MAIOR PREJUÍZO -17.71% (~R$ 2.660). TEM CUPONS. Vender apenas no último dia útil - dar máxima chance de recuperação!", "prioridade": 7, "risco": "ALTO", "cupons": True, "semana": 4}
     }
     
     # Enriquece cada título com estratégia
@@ -217,6 +224,7 @@ def adicionar_estrategias_tesouro(tesouro_dict):
             dados['prioridade'] = estrategia['prioridade']
             dados['risco'] = estrategia['risco']
             dados['tem_cupons'] = estrategia.get('cupons', False)
+            dados['semana_venda'] = estrategia.get('semana', 1)
     
     return tesouro_dict
 
@@ -452,97 +460,61 @@ st.markdown("""
 # --- Estratégia de Tesouro Direto ---
 if TESOURO_DIRETO and any('estrategia' in v for v in TESOURO_DIRETO.values()):
     st.markdown("---")
-    st.subheader("📋 Estratégia de Venda - Tesouro Direto")
+    st.subheader("📋 Estratégia de Saída - Tesouro Direto (3-4 Semanas)")
     
-    # Contador de estratégias
-    estrategias_count = {
-        'manter': 0,
-        'vender': 0,
-        'risco_baixo': 0,
-        'risco_medio': 0,
-        'risco_alto': 0
-    }
+    st.info("🎯 **Estratégia planejada:** Vender títulos em ordem de rentabilidade para minimizar prejuízos. Títulos com lucro primeiro, prejuízos no final.")
+    
+    # Agrupa por semana de venda
+    titulos_por_semana = {1: [], 2: [], 3: [], 4: []}
     
     for titulo, dados in TESOURO_DIRETO.items():
         if 'estrategia' in dados:
-            if 'MANTER' in dados['estrategia']:
-                estrategias_count['manter'] += 1
-            if 'VENDER' in dados['estrategia'] or 'VENDA' in dados['estrategia']:
-                estrategias_count['vender'] += 1
-            
-            risco = dados.get('risco', 'MEDIO')
-            if risco == 'BAIXO':
-                estrategias_count['risco_baixo'] += 1
-            elif risco == 'MEDIO':
-                estrategias_count['risco_medio'] += 1
-            elif risco == 'ALTO':
-                estrategias_count['risco_alto'] += 1
+            semana = dados.get('semana_venda', 1)
+            titulos_por_semana[semana].append((titulo, dados))
     
-    # Métricas resumidas
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        st.metric("📊 Títulos cadastrados", len(TESOURO_DIRETO))
-    with col2:
-        st.metric("✋ Manter", estrategias_count['manter'], delta="Até vencimento", delta_color="off")
-    with col3:
-        st.metric("💰 Considerar venda", estrategias_count['vender'], delta="Condicionado", delta_color="off")
-    with col4:
-        risco_predominante = max(estrategias_count['risco_baixo'], estrategias_count['risco_medio'], estrategias_count['risco_alto'])
-        if risco_predominante == estrategias_count['risco_baixo']:
-            st.metric("🎯 Risco predominante", "BAIXO", delta="🟢", delta_color="normal")
-        elif risco_predominante == estrategias_count['risco_medio']:
-            st.metric("🎯 Risco predominante", "MÉDIO", delta="🟡", delta_color="off")
+    # Exibe por semana
+    for semana in [1, 2, 3, 4]:
+        if not titulos_por_semana[semana]:
+            continue
+            
+        # Cabeçalho da semana
+        if semana == 1:
+            st.markdown("### 📅 Semana 1 (Dias 1-7) - PRIORIDADE MÁXIMA")
+            st.success("🟢 **Vender primeiro:** Alta rentabilidade, sem risco de mercado, liquidez imediata")
+        elif semana == 2:
+            st.markdown("### 📅 Semana 2 (Dias 8-14) - ALTA PRIORIDADE")
+            st.success("🟢 **Realizar lucros:** Rentabilidade alta, sem risco significativo")
+        elif semana == 3:
+            st.markdown("### 📅 Semana 3 (Dias 15-21) - MÉDIA PRIORIDADE")
+            st.warning("🟡 **Lucros baixos:** Ainda positivos, mas vender antes da última semana")
         else:
-            st.metric("🎯 Risco predominante", "ALTO", delta="🔴", delta_color="inverse")
-    
-    # Tabela de estratégias com prioridades
-    with st.expander("📖 Ver estratégias detalhadas por título", expanded=False):
-        # Agrupa por prioridade
-        titulos_por_prioridade = {}
-        for titulo, dados in TESOURO_DIRETO.items():
-            if 'estrategia' in dados:
-                prioridade = dados.get('prioridade', 5)
-                if prioridade not in titulos_por_prioridade:
-                    titulos_por_prioridade[prioridade] = []
-                titulos_por_prioridade[prioridade].append((titulo, dados))
+            st.markdown("### 📅 Semana 4 (Dias 22-28) - ÚLTIMA SEMANA")
+            st.error("🔴 **PREJUÍZOS:** Dar máximo tempo para recuperação. Vender do menor para o maior prejuízo")
         
-        # Exibe por prioridade
-        for prioridade in sorted(titulos_por_prioridade.keys()):
-            st.markdown(f"### 🎯 Prioridade {prioridade}")
+        # Lista títulos da semana
+        for titulo, dados in sorted(titulos_por_semana[semana], key=lambda x: x[1].get('prioridade', 99)):
+            icone_risco = {"BAIXO": "🟢", "MEDIO": "🟡", "ALTO": "🔴"}.get(dados.get('risco', 'MEDIO'), "⚪")
+            icone_cupom = " 💰" if dados.get('tem_cupons', False) else ""
             
-            for titulo, dados in titulos_por_prioridade[prioridade]:
-                # Ícones
-                icone_risco = {"BAIXO": "🟢", "MEDIO": "🟡", "ALTO": "🔴"}.get(dados.get('risco', 'MEDIO'), "⚪")
-                icone_cupom = "💰" if dados.get('tem_cupons', False) else ""
+            with st.expander(f"{icone_risco} **{titulo}**{icone_cupom}", expanded=False):
+                col1, col2 = st.columns(2)
                 
-                with st.container():
-                    col_titulo, col_estrategia, col_acao = st.columns([2, 2, 1])
-                    
-                    with col_titulo:
-                        st.markdown(f"**{icone_risco} {titulo}** {icone_cupom}")
-                        st.caption(f"Investido: R$ {dados.get('valor_investido', 0):,.2f} | Data: {dados.get('data_compra', 'N/A')}")
-                    
-                    with col_estrategia:
-                        estrategia_texto = dados.get('estrategia', 'N/A').replace('_', ' ')
-                        st.markdown(f"**Ação:** {estrategia_texto}")
-                        
-                        gatilho = dados.get('gatilho_venda', 'N/A')
-                        if gatilho != 'N/A' and gatilho != 'NÃO VENDER':
-                            st.caption(f"⚡ Gatilho: {gatilho}")
-                    
-                    with col_acao:
-                        percentual = dados.get('percentual_venda', 0)
-                        if percentual > 0:
-                            st.warning(f"Vender {percentual}%")
-                        else:
-                            st.success("Manter 100%")
-                    
-                    # Motivo da estratégia
-                    motivo = dados.get('motivo_estrategia', '')
-                    if motivo:
-                        st.info(f"💡 {motivo}")
-                    
-                    st.markdown("---")
+                with col1:
+                    st.markdown(f"**📊 Investido:** R$ {dados.get('valor_investido', 0):,.2f}")
+                    st.markdown(f"**📅 Data compra:** {dados.get('data_compra', 'N/A')}")
+                    st.markdown(f"**⚡ Quando vender:** {dados.get('gatilho_venda', 'N/A')}")
+                
+                with col2:
+                    percentual = dados.get('percentual_venda', 0)
+                    st.markdown(f"**💰 Vender:** {percentual}%")
+                    st.markdown(f"**🎯 Risco:** {dados.get('risco', 'MEDIO')}")
+                    if dados.get('tem_cupons'):
+                        st.markdown("**💰 ATENÇÃO:** Título com cupons semestrais - verificar data antes de vender!")
+                
+                # Motivo da estratégia
+                st.info(f"💡 **Estratégia:** {dados.get('motivo_estrategia', '')}")
+        
+        st.markdown("")  # Espaço entre semanas
 
 # --- Indicador de Cotação do Dólar ---
 if US_STOCKS:
