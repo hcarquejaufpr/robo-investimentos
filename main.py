@@ -906,8 +906,9 @@ with st.sidebar.expander("📊 Quantidade de Ativos (Opcional)", expanded=False)
             with st.expander("🔍 Ver o que foi salvo", expanded=True):
                 st.json(new_asset_quantities)
             
-            st.info("♻️ Recarregando página...")
-            st.rerun()
+            st.warning("⚠️ **PÁGINA NÃO VAI RECARREGAR - Veja as mensagens de debug acima!**")
+            st.info("📸 Tire um print de TODAS as mensagens azuis/amarelas acima e me envie!")
+            # st.rerun()  # DESATIVADO PARA DEBUG
         except Exception as e:
             st.error(f"❌ Erro ao salvar: {e}")
             import traceback
