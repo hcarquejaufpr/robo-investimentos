@@ -938,23 +938,24 @@ Tesouro Prefixado 2029 | 2024-08-20 | 2000""",
                 st.warning("⚠️ Cole os dados dos títulos primeiro")
     
     elif import_method == "📊 Tabela Editável":
-        st.info("💡 **Clique no + para adicionar linhas. Delete linhas não usadas.**")
+        st.info("💡 **Cadastro simplificado:** Digite apenas o nome e valor investido. Data não é necessária.")
         
         # Prepara dados existentes
         tesouro_data = []
         for nome, dados in TESOURO_DIRETO.items():
             tesouro_data.append({
                 "Nome do Título": nome,
-                "Data Compra": dados['data_compra'],
                 "Valor Investido": dados.get('valor_investido', 0)
             })
         
-        # Se não houver nenhum, adiciona 3 linhas vazias
+        # Se não houver nenhum, adiciona linhas com sugestões
         if not tesouro_data:
             tesouro_data = [
-                {"Nome do Título": "", "Data Compra": "2024-01-01", "Valor Investido": 0},
-                {"Nome do Título": "", "Data Compra": "2024-01-01", "Valor Investido": 0},
-                {"Nome do Título": "", "Data Compra": "2024-01-01", "Valor Investido": 0}
+                {"Nome do Título": "Tesouro Selic 2027", "Valor Investido": 0},
+                {"Nome do Título": "Tesouro IPCA+ 2055", "Valor Investido": 0},
+                {"Nome do Título": "Tesouro Prefixado 2026", "Valor Investido": 0},
+                {"Nome do Título": "", "Valor Investido": 0},
+                {"Nome do Título": "", "Valor Investido": 0}
             ]
         
         df_tesouro = pd.DataFrame(tesouro_data)
@@ -962,21 +963,29 @@ Tesouro Prefixado 2029 | 2024-08-20 | 2000""",
         edited_tesouro = st.data_editor(
             df_tesouro,
             column_config={
-                "Nome do Título": st.column_config.TextColumn(
+                "Nome do Título": st.column_config.SelectboxColumn(
                     "Nome do Título",
-                    help="Ex: Tesouro Selic 2027, Tesouro IPCA+ 2035",
+                    help="Selecione ou digite o nome completo do título",
+                    options=[
+                        "Tesouro Selic 2026",
+                        "Tesouro Selic 2027",
+                        "Tesouro Selic 2029",
+                        "Tesouro Prefixado 2026",
+                        "Tesouro Prefixado 2028",
+                        "Tesouro Prefixado 2029",
+                        "Tesouro Prefixado com Juros Semestrais 2033",
+                        "Tesouro IPCA+ 2045",
+                        "Tesouro IPCA+ com Juros Semestrais 2035",
+                        "Tesouro IPCA+ com Juros Semestrais 2040",
+                        "Tesouro IPCA+ com Juros Semestrais 2055"
+                    ],
                     required=True
-                ),
-                "Data Compra": st.column_config.DateColumn(
-                    "Data Compra",
-                    format="DD/MM/YYYY",
-                    help="Data que você comprou o título"
                 ),
                 "Valor Investido": st.column_config.NumberColumn(
                     "Valor Investido (R$)",
                     min_value=0,
                     format="R$ %.2f",
-                    help="Opcional: quanto você investiu"
+                    help="Quanto você tem investido HOJE neste título"
                 )
             },
             num_rows="dynamic",
@@ -989,14 +998,9 @@ Tesouro Prefixado 2029 | 2024-08-20 | 2000""",
             new_tesouro = {}
             for _, row in edited_tesouro.iterrows():
                 nome = str(row["Nome do Título"]).strip()
-                if nome and nome.upper() != "NAN":
-                    data = row["Data Compra"]
-                    # Converte datetime para string se necessário
-                    if hasattr(data, 'strftime'):
-                        data = data.strftime("%Y-%m-%d")
-                    
+                if nome and nome.upper() != "NAN" and nome:
                     new_tesouro[nome] = {
-                        'data_compra': str(data),
+                        'data_compra': "2024-01-01",  # Data genérica, não afeta estratégia
                         'valor_investido': float(row["Valor Investido"]) if pd.notna(row["Valor Investido"]) else 0
                     }
             
@@ -2737,47 +2741,28 @@ if PORTFOLIO_SNAPSHOTS and len(PORTFOLIO_SNAPSHOTS) >= 1:
     
     st.caption("💡 **Dica:** O gráfico é atualizado automaticamente a cada acesso. Triângulos verdes = compras, vermelhos = vendas.")
 
-# 2. Otimização Fiscal
-st.header("💰 Tesouro Direto: Análise de IR")
-
-# Explicação da tabela regressiva
-with st.expander("❓ Como funciona a tributação do Tesouro Direto", expanded=False):
-    st.markdown("""
-    ### 📖 Tabela Regressiva de IR
-    
-    O Imposto de Renda sobre o Tesouro Direto **diminui com o tempo:**
-    
-    | Período Investido | Alíquota de IR |
-    |-------------------|----------------|
-    | Até 180 dias      | 22,5% 😰       |
-    | 181 a 360 dias    | 20,0% 😐       |
-    | 361 a 720 dias    | 17,5% 😊       |
-    | Acima de 720 dias | 15,0% 😃       |
-    
-    ### 💡 Estratégia de Otimização
-    
-    - 🚨 **AGUARDE** → Se faltam menos de 30 dias para a próxima faixa, vale a pena esperar!
-    - ✅ **Pode vender** → Se está longe da próxima mudança ou já está na menor alíquota (15%).
-    
-    **Exemplo:** Um título com 355 dias investidos está a apenas 6 dias de cair de 20% para 17,5%. 
-    Esperar economiza 2,5% do rendimento!
-    """)
-
+# 2. Resumo do Tesouro Direto
 if TESOURO_DIRETO:
-    df_tesouro = analyze_taxes(TESOURO_DIRETO)
+    st.markdown("---")
+    st.header("💰 Resumo Tesouro Direto")
     
-    for _, row in df_tesouro.iterrows():
-        if row['Cor'] == 'red':
-            st.error(f"**{row['Título']}** - {row['Status']}")
-        else:
-            st.success(f"**{row['Título']}** - {row['Status']}")
+    total_investido = sum(dados.get('valor_investido', 0) for dados in TESOURO_DIRETO.values())
     
-    st.dataframe(
-        df_tesouro[["Título", "Dias Investidos", "Alíquota Hoje", "Status"]],
-        use_container_width=True
-    )
-else:
-    st.info("Adicione títulos do Tesouro Direto em config.py")
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("📊 Títulos cadastrados", len(TESOURO_DIRETO))
+    with col2:
+        st.metric("💵 Total Investido", f"R$ {total_investido:,.2f}")
+    with col3:
+        # Conta títulos com prejuízo
+        titulos_prejuizo = sum(1 for d in TESOURO_DIRETO.values() if 'estrategia' in d and d.get('risco') == 'ALTO')
+        st.metric("⚠️ Títulos em risco", titulos_prejuizo, delta="Monitorar diariamente", delta_color="inverse")
+    
+    st.info("""
+    💡 **Estratégia sem data de compra:** Foco total na rentabilidade atual e tendência da marcação a mercado.
+    - ✅ Títulos com LUCRO: Vender conforme planejado (semanas 1-3)
+    - 📊 Títulos com PREJUÍZO: Monitorar diariamente e vender quando melhorar (semana 4)
+    """)
 
 # 3. Rodapé
 st.markdown("---")
