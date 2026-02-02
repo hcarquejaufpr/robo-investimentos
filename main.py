@@ -1859,11 +1859,14 @@ if US_STOCKS:
         st.markdown("---")
         st.markdown("### 🎯 Prioridades de Venda (Análise de Tendência)")
         
-        # Conta ativos por prioridade
-        vender_urgente = df_us[df_us["Prioridade"] == 1]
-        considerar_venda = df_us[df_us["Prioridade"] == 2]
-        monitorar = df_us[df_us["Prioridade"] == 3]
-        sem_urgencia = df_us[df_us["Prioridade"] == 4]
+        # FILTRA APENAS ATIVOS QUE VOCÊ AINDA POSSUI (Qtd != "-")
+        df_us_com_posicao = df_us[df_us["Qtd"] != "-"]
+        
+        # Conta ativos por prioridade (APENAS os que você possui)
+        vender_urgente = df_us_com_posicao[df_us_com_posicao["Prioridade"] == 1]
+        considerar_venda = df_us_com_posicao[df_us_com_posicao["Prioridade"] == 2]
+        monitorar = df_us_com_posicao[df_us_com_posicao["Prioridade"] == 3]
+        sem_urgencia = df_us_com_posicao[df_us_com_posicao["Prioridade"] == 4]
         
         col_prior1, col_prior2, col_prior3, col_prior4 = st.columns(4)
         
@@ -2257,11 +2260,14 @@ if BR_FIIS:
         st.markdown("---")
         st.markdown("### 🎯 Prioridades de Venda - FIIs (Análise de Tendência)")
         
-        # Conta ativos por prioridade
-        vender_urgente_br = df_br[df_br["Prioridade"] == 1]
-        considerar_venda_br = df_br[df_br["Prioridade"] == 2]
-        monitorar_br = df_br[df_br["Prioridade"] == 3]
-        sem_urgencia_br = df_br[df_br["Prioridade"] == 4]
+        # FILTRA APENAS ATIVOS QUE VOCÊ AINDA POSSUI (Qtd != "-")
+        df_br_com_posicao = df_br[df_br["Qtd"] != "-"]
+        
+        # Conta ativos por prioridade (APENAS os que você possui)
+        vender_urgente_br = df_br_com_posicao[df_br_com_posicao["Prioridade"] == 1]
+        considerar_venda_br = df_br_com_posicao[df_br_com_posicao["Prioridade"] == 2]
+        monitorar_br = df_br_com_posicao[df_br_com_posicao["Prioridade"] == 3]
+        sem_urgencia_br = df_br_com_posicao[df_br_com_posicao["Prioridade"] == 4]
         
         col_br1, col_br2, col_br3, col_br4 = st.columns(4)
         
