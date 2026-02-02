@@ -181,6 +181,37 @@ def save_user_portfolio(username, portfolio):
     """Salva a carteira específica do usuário no banco de dados."""
     return db.save_user_portfolio(username, portfolio)
 
+def adicionar_estrategias_tesouro(tesouro_dict):
+    """Adiciona estratégias de venda aos títulos do Tesouro Direto."""
+    
+    ESTRATEGIAS = {
+        "Tesouro Selic 2026": {"acao": "VENDA_PARCIAL_SE_NECESSARIO", "percentual_venda": 30, "gatilho": "Liquidez necessária ou rentabilidade atingir 40%", "motivo": "Rentabilidade de +34.72%. Manter 70% até vencimento, pode vender 30% se precisar de liquidez.", "prioridade": 3, "risco": "BAIXO"},
+        "Tesouro Selic 2027": {"acao": "MANTER_ATE_VENCIMENTO", "percentual_venda": 0, "gatilho": "Só vender em emergência extrema", "motivo": "MELHOR PERFORMANCE (+70.25%)! Maior posição da carteira. Manter até vencimento para maximizar ganhos.", "prioridade": 1, "risco": "BAIXO"},
+        "Tesouro Selic 2029": {"acao": "MANTER", "percentual_venda": 0, "gatilho": "N/A", "motivo": "Rentabilidade de +34.22%. Posição pequena, manter como reserva de longo prazo.", "prioridade": 2, "risco": "BAIXO"},
+        "Tesouro Prefixado 2026": {"acao": "VENDER_SE_JUROS_SUBIREM", "percentual_venda": 100, "gatilho": "Se Selic subir para 12%+", "motivo": "Vence em 1 mês. Rentabilidade +27.28%. Liquidar para realocar se juros subirem.", "prioridade": 4, "risco": "BAIXO"},
+        "Tesouro Prefixado 2028": {"acao": "MANTER_MONITORAR", "percentual_venda": 50, "gatilho": "Se Selic > 13% ou rentabilidade < 0%", "motivo": "Rentabilidade baixa (+6.49%). Vender 50% se juros subirem muito, manter 50% até vencimento.", "prioridade": 6, "risco": "MEDIO"},
+        "Tesouro Prefixado 2029": {"acao": "MANTER", "percentual_venda": 0, "gatilho": "N/A", "motivo": "Rentabilidade boa (+26.29%). Posição pequena, manter.", "prioridade": 3, "risco": "MEDIO"},
+        "Tesouro Prefixado com Juros Semestrais 2033": {"acao": "MANTER_ATE_VENCIMENTO", "percentual_venda": 0, "gatilho": "NÃO VENDER", "motivo": "Rentabilidade negativa (-6.51%) é marcação a mercado. Vender cristaliza prejuízo. MANTER até vencimento + receber cupons semestrais.", "prioridade": 1, "risco": "MEDIO", "cupons": True},
+        "Tesouro IPCA+ 2045": {"acao": "MANTER_ATE_VENCIMENTO", "percentual_venda": 0, "gatilho": "NÃO VENDER", "motivo": "Proteção contra inflação longo prazo. Rentabilidade +2.27%, posição pequena.", "prioridade": 2, "risco": "ALTO"},
+        "Tesouro IPCA+ com Juros Semestrais 2035": {"acao": "MANTER_ATE_VENCIMENTO", "percentual_venda": 0, "gatilho": "NÃO VENDER", "motivo": "Rentabilidade negativa (-1.17%) é marcação a mercado. Receber cupons semestrais + correção IPCA.", "prioridade": 1, "risco": "MEDIO", "cupons": True},
+        "Tesouro IPCA+ com Juros Semestrais 2040": {"acao": "MANTER_ATE_VENCIMENTO", "percentual_venda": 0, "gatilho": "NÃO VENDER", "motivo": "Rentabilidade negativa (-7.26%) é marcação a mercado. Vender cristaliza prejuízo de R$ 700+. Manter até vencimento + receber cupons.", "prioridade": 1, "risco": "ALTO", "cupons": True},
+        "Tesouro IPCA+ com Juros Semestrais 2055": {"acao": "MANTER_ATE_VENCIMENTO", "percentual_venda": 0, "gatilho": "NÃO VENDER", "motivo": "MAIOR PREJUÍZO MARCADO (-17.71% = -R$ 2.660). Vender seria erro fatal. Manter para recuperar + receber cupons semestrais por 29 anos.", "prioridade": 1, "risco": "ALTO", "cupons": True}
+    }
+    
+    # Enriquece cada título com estratégia
+    for titulo, dados in tesouro_dict.items():
+        if titulo in ESTRATEGIAS and 'estrategia' not in dados:
+            estrategia = ESTRATEGIAS[titulo]
+            dados['estrategia'] = estrategia['acao']
+            dados['percentual_venda'] = estrategia['percentual_venda']
+            dados['gatilho_venda'] = estrategia['gatilho']
+            dados['motivo_estrategia'] = estrategia['motivo']
+            dados['prioridade'] = estrategia['prioridade']
+            dados['risco'] = estrategia['risco']
+            dados['tem_cupons'] = estrategia.get('cupons', False)
+    
+    return tesouro_dict
+
 def load_users():
     """Carrega usuários do banco de dados."""
     return db.load_users()
@@ -886,6 +917,9 @@ Tesouro Prefixado 2029 | 2024-08-20 | 2000""",
                         errors.append(f"Formato inválido: {line}")
                 
                 if new_tesouro:
+                    # Adiciona estratégias automaticamente
+                    new_tesouro = adicionar_estrategias_tesouro(new_tesouro)
+                    
                     portfolio_to_save = {
                         "US_STOCKS": US_STOCKS,
                         "BR_FIIS": BR_FIIS,
@@ -974,6 +1008,9 @@ Tesouro Prefixado 2029 | 2024-08-20 | 2000""",
                     }
             
             if new_tesouro:
+                # Adiciona estratégias automaticamente
+                new_tesouro = adicionar_estrategias_tesouro(new_tesouro)
+                
                 portfolio_to_save = {
                     "US_STOCKS": US_STOCKS,
                     "BR_FIIS": BR_FIIS,
@@ -1043,6 +1080,9 @@ Tesouro Prefixado 2029 | 2024-08-20 | 2000""",
                                 'data_compra': data,
                                 'valor_investido': valor
                             }
+                        
+                        # Adiciona estratégias automaticamente
+                        new_tesouro = adicionar_estrategias_tesouro(new_tesouro)
                         
                         portfolio_to_save = {
                             "US_STOCKS": US_STOCKS,
