@@ -1689,19 +1689,21 @@ def get_market_data(tickers, multiplier, individual_multipliers=None, asset_quan
                 gain_if_target = (gain_target - last_close) * quantity
                 loss_if_stop = (last_close - stop_price) * quantity
                 
-                # GANHO/PERDA REAL (desde a entrada)
+                # GANHO/PERDA REAL (desde a entrada) - SÓ CALCULA SE TEM PREÇO DE ENTRADA VÁLIDO
+                # Isso evita mostrar valores incorretos quando não há histórico de compra
                 if preco_entrada and preco_entrada > 0:
                     resultado_real = (last_close - preco_entrada) * quantity
                     resultado_percentual = ((last_close - preco_entrada) / preco_entrada) * 100
                 else:
-                    resultado_real = 0
-                    resultado_percentual = 0
+                    # Sem preço de entrada = sem cálculo de realizado
+                    resultado_real = None  # Usa None para não somar no resumo
+                    resultado_percentual = None
             else:
                 position_value = 0
                 gain_if_target = 0
                 loss_if_stop = 0
-                resultado_real = 0
-                resultado_percentual = 0
+                resultado_real = None  # Usa None para não somar no resumo
+                resultado_percentual = None
                 preco_entrada = 0
             
             # ================================================================
@@ -1720,8 +1722,8 @@ def get_market_data(tickers, multiplier, individual_multipliers=None, asset_quan
                 "Qtd": quantity if quantity > 0 else "-",
                 "Preço Entrada": preco_entrada if preco_entrada > 0 else "-",
                 "Preço Atual": last_close,
-                "Realizado ($)": resultado_real if quantity > 0 else "-",
-                "Realizado (%)": resultado_percentual if quantity > 0 else "-",
+                "Realizado ($)": resultado_real if resultado_real is not None else "-",
+                "Realizado (%)": resultado_percentual if resultado_percentual is not None else "-",
                 "Valor Posição": position_value if quantity > 0 else "-",
                 "Volatilidade (ATR) %": atr_percent,
                 "RSI (Termômetro)": rsi_status,
@@ -2533,14 +2535,20 @@ if ASSET_QUANTITIES:
         total_loss_brl = 0
         
         if not df_us_calc.empty:
+            # Filtra apenas valores numéricos válidos (ignora "-")
+            valores_validos_usd = df_us_calc[df_us_calc["Realizado ($)"] != "-"]
+            
             total_usd = df_us_calc["Valor Posição"].sum()
-            total_realizado_usd = df_us_calc["Realizado ($)"].sum()
+            total_realizado_usd = valores_validos_usd["Realizado ($)"].sum() if not valores_validos_usd.empty else 0
             total_gain_usd = df_us_calc["Projeção Alvo ($)"].sum()
             total_loss_usd = df_us_calc["Projeção Stop ($)"].sum()
         
         if not df_br_calc.empty:
+            # Filtra apenas valores numéricos válidos (ignora "-")
+            valores_validos_brl = df_br_calc[df_br_calc["Realizado ($)"] != "-"]
+            
             total_brl = df_br_calc["Valor Posição"].sum()
-            total_realizado_brl = df_br_calc["Realizado ($)"].sum()
+            total_realizado_brl = valores_validos_brl["Realizado ($)"].sum() if not valores_validos_brl.empty else 0
             total_gain_brl = df_br_calc["Projeção Alvo ($)"].sum()
             total_loss_brl = df_br_calc["Projeção Stop ($)"].sum()
         
