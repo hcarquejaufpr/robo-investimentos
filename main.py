@@ -1149,7 +1149,7 @@ with st.sidebar.expander("📊 Quantidade de Ativos (Opcional)", expanded=False)
     with st.expander("🇺🇸 Quantidades EUA", expanded=True):
         st.info("💡 **Edite a tabela abaixo e clique em 'SALVAR QUANTIDADES AGORA' no final para salvar**")
         
-        # Prepara DataFrame com apenas as ações que têm quantidade cadastrada
+        # Prepara DataFrame com TODAS as ações cadastradas
         us_data = []
         for ticker in US_STOCKS:
             asset_info = ASSET_QUANTITIES.get(ticker, 0)
@@ -1158,11 +1158,10 @@ with st.sidebar.expander("📊 Quantidade de Ativos (Opcional)", expanded=False)
             else:
                 qty = asset_info if asset_info else 0
             
-            # Só adiciona se tiver quantidade > 0
-            if qty > 0:
-                us_data.append({"Ticker": ticker, "Quantidade": qty})
+            # Adiciona TODAS as ações, mesmo com quantidade 0
+            us_data.append({"Ticker": ticker, "Quantidade": qty})
         
-        # Se não houver nenhuma, mostra uma linha vazia para começar
+        # Se não houver nenhuma ação cadastrada, mostra uma linha vazia
         if not us_data:
             us_data = [{"Ticker": "", "Quantidade": 0.0}]
         
@@ -1198,7 +1197,7 @@ with st.sidebar.expander("📊 Quantidade de Ativos (Opcional)", expanded=False)
     with st.expander("🇧🇷 Quantidades Brasil", expanded=True):
         st.info("💡 **Edite a tabela abaixo e clique em 'SALVAR QUANTIDADES AGORA' no final para salvar**")
         
-        # Prepara DataFrame com apenas os FIIs que têm quantidade cadastrada
+        # Prepara DataFrame com TODOS os FIIs cadastrados
         br_data = []
         for ticker in BR_FIIS:
             asset_info = ASSET_QUANTITIES.get(ticker, 0)
@@ -1207,11 +1206,10 @@ with st.sidebar.expander("📊 Quantidade de Ativos (Opcional)", expanded=False)
             else:
                 qty = asset_info if asset_info else 0
             
-            # Só adiciona se tiver quantidade > 0
-            if qty > 0:
-                br_data.append({"Ticker": ticker, "Quantidade": qty})
+            # Adiciona TODOS os FIIs, mesmo com quantidade 0
+            br_data.append({"Ticker": ticker, "Quantidade": qty})
         
-        # Se não houver nenhuma, mostra uma linha vazia para começar
+        # Se não houver nenhum FII cadastrado, mostra uma linha vazia
         if not br_data:
             br_data = [{"Ticker": "", "Quantidade": 0.0}]
         
