@@ -766,8 +766,8 @@ with st.sidebar.expander("📊 Quantidade de Ativos (Opcional)", expanded=False)
                     f"**{ticker}**",
                     min_value=0.0,
                     value=float(current_qty),
-                    step=0.1,
-                    format="%.2f",
+                    step=0.000001,
+                    format="%.6f",
                     key=f"qty_input_{ticker}"
                 )
             
