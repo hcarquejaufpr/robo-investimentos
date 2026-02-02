@@ -4,6 +4,14 @@ Sistema inteligente para monitoramento de carteira de investimentos (Brasil e EU
 
 ## 📊 Funcionalidades
 
+### 🎯 Preços de Stop (NOVO!)
+- **Valores Calculados Automaticamente**: Disparo e Limite para Stop Loss e Stop Gain
+- **Para Uso no Home Broker**: Copie e cole direto na sua corretora
+- **Baseado em ATR**: Ajustado automaticamente pela volatilidade
+- **Simples e Prático**: 4 colunas extras na tabela
+
+📖 **Ver:** [GUIA_STOP_SIMPLES.md](GUIA_STOP_SIMPLES.md) para tutorial completo
+
 ### Renda Variável
 - **ATR (Average True Range)**: Mede volatilidade
 - **Trailing Stop Loss**: Preço de saída automatizado
@@ -41,12 +49,14 @@ Edite `config.py` ou use a interface web para adicionar:
 O sistema utiliza **SQLite** com volumes Docker para garantir que seus dados não sejam perdidos:
 - ✅ Usuários e senhas persistem entre reinicializações
 - ✅ Carteiras individuais salvas automaticamente
+- ✅ Histórico completo de operações
 - ✅ Migração automática de arquivos JSON antigos
 
 📖 **Ver:** [DATABASE_GUIDE.md](DATABASE_GUIDE.md) para mais detalhes
 
 ## 📚 Documentação Adicional
 
+- 🎯 [GUIA_STOP_SIMPLES.md](GUIA_STOP_SIMPLES.md) - **Como usar os preços de Stop**
 - 📁 [CARTEIRAS_INDIVIDUAIS.md](CARTEIRAS_INDIVIDUAIS.md) - Sistema multi-usuário
 - 🔑 [CONFIGURAR_SENHA.md](CONFIGURAR_SENHA.md) - Autenticação e segurança
 - 📧 [CONFIGURAR_EMAIL.md](CONFIGURAR_EMAIL.md) - Notificações por email

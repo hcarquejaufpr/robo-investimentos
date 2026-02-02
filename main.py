@@ -1708,6 +1708,13 @@ def get_market_data(tickers, multiplier, individual_multipliers=None, asset_quan
             # ADICIONA AO RESULTADO
             # ================================================================
             
+            # Calcula preços de disparo e limite para home broker
+            stop_loss_disparo = stop_price
+            stop_loss_limite = stop_price * 0.995  # 0.5% abaixo do disparo
+            
+            stop_gain_disparo = gain_target
+            stop_gain_limite = gain_target * 0.995  # 0.5% abaixo do disparo
+            
             data_list.append({
                 "Ticker": ticker_clean,
                 "Qtd": quantity if quantity > 0 else "-",
@@ -1718,6 +1725,10 @@ def get_market_data(tickers, multiplier, individual_multipliers=None, asset_quan
                 "Valor Posição": position_value if quantity > 0 else "-",
                 "Volatilidade (ATR) %": atr_percent,
                 "RSI (Termômetro)": rsi_status,
+                "🛑 SL Disparo": stop_loss_disparo,
+                "🛑 SL Limite": stop_loss_limite,
+                "💰 SG Disparo": stop_gain_disparo,
+                "💰 SG Limite": stop_gain_limite,
                 "Stop Loss": stop_price,
                 "Alvo (Gain)": gain_target,
                 "Projeção Alvo ($)": gain_if_target if quantity > 0 else "-",
@@ -1948,14 +1959,14 @@ if US_STOCKS:
         df_us_sorted = df_us.sort_values("Prioridade")
         
         if has_quantities:
-            display_columns = ["Recomendação", "Ticker", "Qtd", "Preço Entrada", "Preço Atual", "Realizado ($)", "Realizado (%)", 
-                             "Valor Posição", "Projeção Alvo ($)", "Projeção Stop ($)", "Volatilidade (ATR) %", "RSI (Termômetro)", 
-                             "Stop Loss", "Alvo (Gain)", "Potencial", "Risco (%)", 
-                             "Tendência", "ATR Mult. ⚙️"]
+            display_columns = ["Ticker", "Qtd", "Preço Atual", 
+                             "🛑 SL Disparo", "🛑 SL Limite", "💰 SG Disparo", "💰 SG Limite",
+                             "Valor Posição", "Realizado (%)", "Projeção Alvo ($)", "Projeção Stop ($)",
+                             "Volatilidade (ATR) %", "RSI (Termômetro)", "Tendência", "ATR Mult. ⚙️"]
         else:
-            display_columns = ["Recomendação", "Ticker", "Preço Atual", "Volatilidade (ATR) %", "RSI (Termômetro)", 
-                             "Stop Loss", "Alvo (Gain)", "Potencial", "Risco (%)", 
-                             "Tendência", "ATR Mult. ⚙️"]
+            display_columns = ["Ticker", "Preço Atual", 
+                             "🛑 SL Disparo", "🛑 SL Limite", "💰 SG Disparo", "💰 SG Limite",
+                             "Volatilidade (ATR) %", "RSI (Termômetro)", "Tendência", "ATR Mult. ⚙️"]
         
         # Configura colunas editáveis
         edited_df_us = st.data_editor(
@@ -2018,6 +2029,30 @@ if US_STOCKS:
                     disabled=True
                 ),
                 "RSI (Termômetro)": st.column_config.TextColumn("RSI (Termômetro)", disabled=True),
+                "🛑 SL Disparo": st.column_config.NumberColumn(
+                    "🛑 SL Disparo",
+                    format="$%.2f",
+                    help="💡 Preço de DISPARO do Stop Loss. Copie este valor para seu home broker. Quando atingir, ativa a venda.",
+                    disabled=True
+                ),
+                "🛑 SL Limite": st.column_config.NumberColumn(
+                    "🛑 SL Limite",
+                    format="$%.2f",
+                    help="💡 Preço LIMITE do Stop Loss. Venda mínima aceita após disparo (0.5% margem).",
+                    disabled=True
+                ),
+                "💰 SG Disparo": st.column_config.NumberColumn(
+                    "💰 SG Disparo",
+                    format="$%.2f",
+                    help="💡 Preço de DISPARO do Stop Gain. Quando atingir, realiza lucro automaticamente.",
+                    disabled=True
+                ),
+                "💰 SG Limite": st.column_config.NumberColumn(
+                    "💰 SG Limite",
+                    format="$%.2f",
+                    help="💡 Preço LIMITE do Stop Gain. Venda mínima após disparo (0.5% margem).",
+                    disabled=True
+                ),
                 "Stop Loss Sugerido": st.column_config.NumberColumn(
                     "Stop Loss 🛑",
                     format="$%.1f",
@@ -2308,18 +2343,14 @@ if BR_FIIS:
                 st.write(f"**has_quantities_br = {has_quantities_br}**")
             
         if has_quantities_br:
-            # MESMAS colunas e MESMA ordem que ações US
-            display_columns_br = ["Recomendação", "Ticker", "Qtd", "Preço Entrada", "Preço Atual", "Realizado ($)", "Realizado (%)", 
-                                 "Valor Posição", "Projeção Alvo ($)", "Projeção Stop ($)", "Volatilidade (ATR) %", "RSI (Termômetro)", 
-                                 "Stop Loss", "Alvo (Gain)", "Potencial", "Risco (%)", 
-                                 "Tendência", "ATR Mult. ⚙️"]
-            if st.session_state.get('debug_mode', False):
-                st.success(f"✅ USANDO COLUNAS COM QUANTIDADES ({len(display_columns_br)} colunas)")
-                st.json(display_columns_br)
+            display_columns_br = ["Ticker", "Qtd", "Preço Atual", 
+                                 "🛑 SL Disparo", "🛑 SL Limite", "💰 SG Disparo", "💰 SG Limite",
+                                 "Valor Posição", "Realizado (%)", "Projeção Alvo ($)", "Projeção Stop ($)",
+                                 "Volatilidade (ATR) %", "RSI (Termômetro)", "Tendência", "ATR Mult. ⚙️"]
         else:
-            display_columns_br = ["Recomendação", "Ticker", "Preço Atual", "Volatilidade (ATR) %", "RSI (Termômetro)", 
-                                 "Stop Loss", "Alvo (Gain)", "Potencial", "Risco (%)", 
-                                 "Tendência", "ATR Mult. ⚙️"]
+            display_columns_br = ["Ticker", "Preço Atual", 
+                                 "🛑 SL Disparo", "🛑 SL Limite", "💰 SG Disparo", "💰 SG Limite",
+                                 "Volatilidade (ATR) %", "RSI (Termômetro)", "Tendência", "ATR Mult. ⚙️"]
             if st.session_state.get('debug_mode', False):
                 st.warning(f"⚠️ USANDO COLUNAS SEM QUANTIDADES ({len(display_columns_br)} colunas)")
                 st.json(display_columns_br)
@@ -2401,6 +2432,30 @@ if BR_FIIS:
                     disabled=True
                 ),
                 "RSI (Termômetro)": st.column_config.TextColumn("RSI (Termômetro)", disabled=True),
+                "🛑 SL Disparo": st.column_config.NumberColumn(
+                    "🛑 SL Disparo",
+                    format="R$ %.2f",
+                    help="💡 Preço de DISPARO do Stop Loss. Copie este valor para seu home broker. Quando atingir, ativa a venda.",
+                    disabled=True
+                ),
+                "🛑 SL Limite": st.column_config.NumberColumn(
+                    "🛑 SL Limite",
+                    format="R$ %.2f",
+                    help="💡 Preço LIMITE do Stop Loss. Venda mínima aceita após disparo (0.5% margem).",
+                    disabled=True
+                ),
+                "💰 SG Disparo": st.column_config.NumberColumn(
+                    "💰 SG Disparo",
+                    format="R$ %.2f",
+                    help="💡 Preço de DISPARO do Stop Gain. Quando atingir, realiza lucro automaticamente.",
+                    disabled=True
+                ),
+                "💰 SG Limite": st.column_config.NumberColumn(
+                    "💰 SG Limite",
+                    format="R$ %.2f",
+                    help="💡 Preço LIMITE do Stop Gain. Venda mínima após disparo (0.5% margem).",
+                    disabled=True
+                ),
                 "Stop Loss": st.column_config.NumberColumn(
                     "Stop Loss 🛑",
                     format="R$ %.1f",
