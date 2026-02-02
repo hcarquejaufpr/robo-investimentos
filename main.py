@@ -397,6 +397,101 @@ st.markdown("""
 * **Tesouro Direto:** Analisa a tabela regressiva de IR para economizar impostos.
 """)
 
+# --- Estratégia de Tesouro Direto ---
+if TESOURO_DIRETO and any('estrategia' in v for v in TESOURO_DIRETO.values()):
+    st.markdown("---")
+    st.subheader("📋 Estratégia de Venda - Tesouro Direto")
+    
+    # Contador de estratégias
+    estrategias_count = {
+        'manter': 0,
+        'vender': 0,
+        'risco_baixo': 0,
+        'risco_medio': 0,
+        'risco_alto': 0
+    }
+    
+    for titulo, dados in TESOURO_DIRETO.items():
+        if 'estrategia' in dados:
+            if 'MANTER' in dados['estrategia']:
+                estrategias_count['manter'] += 1
+            if 'VENDER' in dados['estrategia'] or 'VENDA' in dados['estrategia']:
+                estrategias_count['vender'] += 1
+            
+            risco = dados.get('risco', 'MEDIO')
+            if risco == 'BAIXO':
+                estrategias_count['risco_baixo'] += 1
+            elif risco == 'MEDIO':
+                estrategias_count['risco_medio'] += 1
+            elif risco == 'ALTO':
+                estrategias_count['risco_alto'] += 1
+    
+    # Métricas resumidas
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric("📊 Títulos cadastrados", len(TESOURO_DIRETO))
+    with col2:
+        st.metric("✋ Manter", estrategias_count['manter'], delta="Até vencimento", delta_color="off")
+    with col3:
+        st.metric("💰 Considerar venda", estrategias_count['vender'], delta="Condicionado", delta_color="off")
+    with col4:
+        risco_predominante = max(estrategias_count['risco_baixo'], estrategias_count['risco_medio'], estrategias_count['risco_alto'])
+        if risco_predominante == estrategias_count['risco_baixo']:
+            st.metric("🎯 Risco predominante", "BAIXO", delta="🟢", delta_color="normal")
+        elif risco_predominante == estrategias_count['risco_medio']:
+            st.metric("🎯 Risco predominante", "MÉDIO", delta="🟡", delta_color="off")
+        else:
+            st.metric("🎯 Risco predominante", "ALTO", delta="🔴", delta_color="inverse")
+    
+    # Tabela de estratégias com prioridades
+    with st.expander("📖 Ver estratégias detalhadas por título", expanded=False):
+        # Agrupa por prioridade
+        titulos_por_prioridade = {}
+        for titulo, dados in TESOURO_DIRETO.items():
+            if 'estrategia' in dados:
+                prioridade = dados.get('prioridade', 5)
+                if prioridade not in titulos_por_prioridade:
+                    titulos_por_prioridade[prioridade] = []
+                titulos_por_prioridade[prioridade].append((titulo, dados))
+        
+        # Exibe por prioridade
+        for prioridade in sorted(titulos_por_prioridade.keys()):
+            st.markdown(f"### 🎯 Prioridade {prioridade}")
+            
+            for titulo, dados in titulos_por_prioridade[prioridade]:
+                # Ícones
+                icone_risco = {"BAIXO": "🟢", "MEDIO": "🟡", "ALTO": "🔴"}.get(dados.get('risco', 'MEDIO'), "⚪")
+                icone_cupom = "💰" if dados.get('tem_cupons', False) else ""
+                
+                with st.container():
+                    col_titulo, col_estrategia, col_acao = st.columns([2, 2, 1])
+                    
+                    with col_titulo:
+                        st.markdown(f"**{icone_risco} {titulo}** {icone_cupom}")
+                        st.caption(f"Investido: R$ {dados.get('valor_investido', 0):,.2f} | Data: {dados.get('data_compra', 'N/A')}")
+                    
+                    with col_estrategia:
+                        estrategia_texto = dados.get('estrategia', 'N/A').replace('_', ' ')
+                        st.markdown(f"**Ação:** {estrategia_texto}")
+                        
+                        gatilho = dados.get('gatilho_venda', 'N/A')
+                        if gatilho != 'N/A' and gatilho != 'NÃO VENDER':
+                            st.caption(f"⚡ Gatilho: {gatilho}")
+                    
+                    with col_acao:
+                        percentual = dados.get('percentual_venda', 0)
+                        if percentual > 0:
+                            st.warning(f"Vender {percentual}%")
+                        else:
+                            st.success("Manter 100%")
+                    
+                    # Motivo da estratégia
+                    motivo = dados.get('motivo_estrategia', '')
+                    if motivo:
+                        st.info(f"💡 {motivo}")
+                    
+                    st.markdown("---")
+
 # --- Indicador de Cotação do Dólar ---
 if US_STOCKS:
     st.markdown("---")
