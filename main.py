@@ -2513,9 +2513,13 @@ if ASSET_QUANTITIES:
         st.markdown("---")
         st.header("💰 Resumo da Carteira")
         
-        # Separa por moeda
-        df_us_filtered = df_us[df_us["Qtd"] != "-"].copy() if US_STOCKS and 'df_us' in locals() and not df_us.empty else pd.DataFrame()
-        df_br_filtered = df_br[df_br["Qtd"] != "-"].copy() if BR_FIIS and 'df_br' in locals() and not df_br.empty else pd.DataFrame()
+        # Separa por moeda (INCLUI ativos zerados para mostrar histórico completo)
+        df_us_filtered = df_us.copy() if US_STOCKS and 'df_us' in locals() and not df_us.empty else pd.DataFrame()
+        df_br_filtered = df_br.copy() if BR_FIIS and 'df_br' in locals() and not df_br.empty else pd.DataFrame()
+        
+        # Filtra apenas ativos com quantidade > 0 para cálculos
+        df_us_calc = df_us_filtered[df_us_filtered["Qtd"] != "-"].copy() if not df_us_filtered.empty else pd.DataFrame()
+        df_br_calc = df_br_filtered[df_br_filtered["Qtd"] != "-"].copy() if not df_br_filtered.empty else pd.DataFrame()
         
         # Calcula totais por moeda
         total_usd = 0
@@ -2528,17 +2532,17 @@ if ASSET_QUANTITIES:
         total_gain_brl = 0
         total_loss_brl = 0
         
-        if not df_us_filtered.empty:
-            total_usd = df_us_filtered["Valor Posição"].sum()
-            total_realizado_usd = df_us_filtered["Realizado ($)"].sum()
-            total_gain_usd = df_us_filtered["Projeção Alvo ($)"].sum()
-            total_loss_usd = df_us_filtered["Projeção Stop ($)"].sum()
+        if not df_us_calc.empty:
+            total_usd = df_us_calc["Valor Posição"].sum()
+            total_realizado_usd = df_us_calc["Realizado ($)"].sum()
+            total_gain_usd = df_us_calc["Projeção Alvo ($)"].sum()
+            total_loss_usd = df_us_calc["Projeção Stop ($)"].sum()
         
-        if not df_br_filtered.empty:
-            total_brl = df_br_filtered["Valor Posição"].sum()
-            total_realizado_brl = df_br_filtered["Realizado ($)"].sum()
-            total_gain_brl = df_br_filtered["Projeção Alvo ($)"].sum()
-            total_loss_brl = df_br_filtered["Projeção Stop ($)"].sum()
+        if not df_br_calc.empty:
+            total_brl = df_br_calc["Valor Posição"].sum()
+            total_realizado_brl = df_br_calc["Realizado ($)"].sum()
+            total_gain_brl = df_br_calc["Projeção Alvo ($)"].sum()
+            total_loss_brl = df_br_calc["Projeção Stop ($)"].sum()
         
         # Exibe resumo por moeda
         if total_usd > 0 or total_brl > 0:
@@ -2623,9 +2627,11 @@ if ASSET_QUANTITIES:
             st.info("💡 Cadastre quantidades para ver o resumo financeiro")
 
 # --- Histórico de Operações ---
+st.markdown("---")
+st.header("📝 Histórico de Operações")
+
 if OPERATIONS_HISTORY:
-    st.markdown("---")
-    st.header("📝 Histórico de Operações")
+    st.success(f"✅ {len(OPERATIONS_HISTORY)} operação(ões) registrada(s)")
     
     df_operations = pd.DataFrame(OPERATIONS_HISTORY)
     df_operations = df_operations.sort_values("data", ascending=False)
@@ -2653,6 +2659,8 @@ if OPERATIONS_HISTORY:
             save_user_portfolio(current_username, user_portfolio)
             st.success("✅ Histórico limpo!")
             st.rerun()
+else:
+    st.info("📝 Nenhuma operação registrada ainda. Use o painel lateral para adicionar compras/vendas.")
 
 # --- Gráfico de Evolução da Carteira ---
 if PORTFOLIO_SNAPSHOTS and len(PORTFOLIO_SNAPSHOTS) >= 1:
