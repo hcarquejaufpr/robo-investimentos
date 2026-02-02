@@ -184,6 +184,9 @@ def save_user_portfolio(username, portfolio):
 def adicionar_estrategias_tesouro(tesouro_dict):
     """Adiciona estratégias de venda aos títulos do Tesouro Direto."""
     
+    if not tesouro_dict or not isinstance(tesouro_dict, dict):
+        return tesouro_dict
+    
     ESTRATEGIAS = {
         "Tesouro Selic 2026": {"acao": "VENDA_PARCIAL_SE_NECESSARIO", "percentual_venda": 30, "gatilho": "Liquidez necessária ou rentabilidade atingir 40%", "motivo": "Rentabilidade de +34.72%. Manter 70% até vencimento, pode vender 30% se precisar de liquidez.", "prioridade": 3, "risco": "BAIXO"},
         "Tesouro Selic 2027": {"acao": "MANTER_ATE_VENCIMENTO", "percentual_venda": 0, "gatilho": "Só vender em emergência extrema", "motivo": "MELHOR PERFORMANCE (+70.25%)! Maior posição da carteira. Manter até vencimento para maximizar ganhos.", "prioridade": 1, "risco": "BAIXO"},
@@ -200,6 +203,11 @@ def adicionar_estrategias_tesouro(tesouro_dict):
     
     # Enriquece cada título com estratégia
     for titulo, dados in tesouro_dict.items():
+        # Garante que dados é um dicionário
+        if not isinstance(dados, dict):
+            continue
+            
+        # Só adiciona estratégia se o título estiver no dicionário e ainda não tiver
         if titulo in ESTRATEGIAS and 'estrategia' not in dados:
             estrategia = ESTRATEGIAS[titulo]
             dados['estrategia'] = estrategia['acao']
@@ -383,6 +391,19 @@ user_portfolio = load_user_portfolio(current_username)
 US_STOCKS = user_portfolio.get("US_STOCKS", [])
 BR_FIIS = user_portfolio.get("BR_FIIS", [])
 TESOURO_DIRETO = user_portfolio.get("TESOURO_DIRETO", {})
+
+# Enriquece títulos do Tesouro com estratégias (se ainda não tiverem)
+if TESOURO_DIRETO:
+    titulos_sem_estrategia = sum(1 for v in TESOURO_DIRETO.values() if isinstance(v, dict) and 'estrategia' not in v)
+    if titulos_sem_estrategia > 0:
+        st.sidebar.info(f"🔄 Adicionando estratégias a {titulos_sem_estrategia} título(s)...")
+        TESOURO_DIRETO = adicionar_estrategias_tesouro(TESOURO_DIRETO)
+        # Salva automaticamente para persistir as estratégias
+        user_portfolio["TESOURO_DIRETO"] = TESOURO_DIRETO
+        save_user_portfolio(current_username, user_portfolio)
+        st.sidebar.success(f"✅ Estratégias adicionadas!")
+    else:
+        st.sidebar.success(f"✅ {len(TESOURO_DIRETO)} título(s) com estratégias!")
 
 # Garante valores padrão para parâmetros
 PARAMETROS = user_portfolio.get("PARAMETROS", {})
