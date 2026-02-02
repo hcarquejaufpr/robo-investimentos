@@ -1403,7 +1403,7 @@ with st.sidebar.expander("📝 Registrar Operação (Compra/Venda)", expanded=Fa
     
     col3, col4 = st.columns(2)
     with col3:
-        op_quantity = st.number_input("Quantidade", min_value=0.001, value=10.0, step=0.001, format="%.3f", key="op_quantity")
+        op_quantity = st.number_input("Quantidade", min_value=0.000001, value=10.0, step=0.000001, format="%.6f", key="op_quantity")
     with col4:
         op_price = st.number_input("Preço", min_value=0.01, value=100.0, step=0.1, key="op_price")
     
