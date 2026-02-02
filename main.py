@@ -1852,30 +1852,137 @@ if BR_FIIS:
     st.caption(f"📊 Analisando {len(BR_FIIS)} ticker(s): {', '.join(BR_FIIS)}")
     df_br = get_market_data(BR_FIIS, mult_br, individual_multipliers=INDIVIDUAL_MULTIPLIERS, asset_quantities=ASSET_QUANTITIES)
     if not df_br.empty:
+        # === PAINEL DE PRIORIDADES DE VENDA BR ===
+        st.markdown("---")
+        st.markdown("### 🎯 Prioridades de Venda - FIIs (Análise de Tendência)")
+        
+        # Conta ativos por prioridade
+        vender_urgente_br = df_br[df_br["Prioridade"] == 1]
+        considerar_venda_br = df_br[df_br["Prioridade"] == 2]
+        monitorar_br = df_br[df_br["Prioridade"] == 3]
+        sem_urgencia_br = df_br[df_br["Prioridade"] == 4]
+        
+        col_br1, col_br2, col_br3, col_br4 = st.columns(4)
+        
+        with col_br1:
+            if len(vender_urgente_br) > 0:
+                st.error(f"""
+                **🚨 VENDER URGENTE**
+                
+                **{len(vender_urgente_br)} ativo(s)**
+                
+                {', '.join(vender_urgente_br['Ticker'].tolist())}
+                
+                *Tendência de baixa forte!*
+                """)
+            else:
+                st.success("✅ Nenhum ativo urgente")
+        
+        with col_br2:
+            if len(considerar_venda_br) > 0:
+                st.warning(f"""
+                **⚠️ Considerar Venda**
+                
+                **{len(considerar_venda_br)} ativo(s)**
+                
+                {', '.join(considerar_venda_br['Ticker'].tolist())}
+                
+                *Tendência de baixa moderada*
+                """)
+            else:
+                st.info("ℹ️ Nenhum para considerar")
+        
+        with col_br3:
+            if len(monitorar_br) > 0:
+                st.info(f"""
+                **👁️ Monitorar**
+                
+                **{len(monitorar_br)} ativo(s)**
+                
+                {', '.join(monitorar_br['Ticker'].tolist())}
+                
+                *Sinais mistos*
+                """)
+            else:
+                st.info("ℹ️ Nenhum para monitorar")
+        
+        with col_br4:
+            if len(sem_urgencia_br) > 0:
+                st.success(f"""
+                **🟢 Sem Urgência**
+                
+                **{len(sem_urgencia_br)} ativo(s)**
+                
+                {', '.join(sem_urgencia_br['Ticker'].tolist())}
+                
+                *Tendência de alta*
+                """)
+        
+        st.markdown("---")
+        
+        # Ordena por prioridade
+        df_br_sorted = df_br.sort_values("Prioridade")
+        
         # Define quais colunas mostrar (depende se tem quantidades cadastradas)
         has_quantities_br = any(df_br["Qtd"] != "-")
         
         if has_quantities_br:
-            display_columns_br = ["Ticker", "Qtd", "Preço Entrada", "Preço Atual", "Realizado ($)", "Realizado (%)", 
-                                 "Valor Posição", "Volatilidade (ATR) %", "RSI (Termômetro)", 
+            display_columns_br = ["Recomendação", "Ticker", "Qtd", "Preço Entrada", "Preço Atual", "Realizado ($)", "Realizado (%)", 
+                                 "Valor Posição", "Projeção Alvo ($)", "Projeção Stop ($)", "Volatilidade (ATR) %", "RSI (Termômetro)", 
                                  "Stop Loss", "Alvo (Gain)", "Potencial", "Risco (%)", 
                                  "Tendência", "ATR Mult. ⚙️"]
         else:
-            display_columns_br = ["Ticker", "Preço Atual", "Volatilidade (ATR) %", "RSI (Termômetro)", 
+            display_columns_br = ["Recomendação", "Ticker", "Preço Atual", "Volatilidade (ATR) %", "RSI (Termômetro)", 
                                  "Stop Loss", "Alvo (Gain)", "Potencial", "Risco (%)", 
                                  "Tendência", "ATR Mult. ⚙️"]
         
         # Configura colunas editáveis
         edited_df_br = st.data_editor(
-            df_br[display_columns_br],
+            df_br_sorted[display_columns_br],
             use_container_width=True,
             column_config={
+                "Recomendação": st.column_config.TextColumn(
+                    "🎯 Ação",
+                    help="Recomendação baseada na análise de tendência",
+                    disabled=True,
+                    width="medium"
+                ),
                 "Ticker": st.column_config.TextColumn("Ticker", disabled=True),
                 "Qtd": st.column_config.TextColumn("Qtd", disabled=True),
+                "Preço Entrada": st.column_config.NumberColumn(
+                    "Preço Entrada",
+                    format="R$ %.2f",
+                    help="Preço quando você cadastrou a quantidade",
+                    disabled=True
+                ),
                 "Valor Posição": st.column_config.NumberColumn(
                     "Valor Posição",
                     format="R$ %.0f",
                     help="Valor total investido neste ativo (Quantidade × Preço Atual)",
+                    disabled=True
+                ),
+                "Realizado ($)": st.column_config.NumberColumn(
+                    "Realizado ($)",
+                    format="R$ %.2f",
+                    help="Ganho/Perda real desde sua entrada",
+                    disabled=True
+                ),
+                "Realizado (%)": st.column_config.NumberColumn(
+                    "Realizado (%)",
+                    format="%.2f%%",
+                    help="Percentual de ganho/perda desde sua entrada",
+                    disabled=True
+                ),
+                "Projeção Alvo ($)": st.column_config.NumberColumn(
+                    "Projeção Alvo ($)",
+                    format="R$ %.2f",
+                    help="Lucro potencial se atingir o alvo",
+                    disabled=True
+                ),
+                "Projeção Stop ($)": st.column_config.NumberColumn(
+                    "Projeção Stop ($)",
+                    format="R$ %.2f",
+                    help="Perda potencial se acionar o stop",
                     disabled=True
                 ),
                 "Preço Atual": st.column_config.NumberColumn(
@@ -1900,18 +2007,6 @@ if BR_FIIS:
                     "Alvo (Gain) 🎯",
                     format="R$ %.1f",
                     help="Preço alvo de lucro (2.0x ATR acima do preço atual). Meta de venda estratégica.",
-                    disabled=True
-                ),
-                "Ganho se Alvo": st.column_config.NumberColumn(
-                    "Ganho R$ 🎯",
-                    format="R$ %.0f",
-                    help="Lucro em reais se atingir o alvo (Quantidade × Diferença de preço)",
-                    disabled=True
-                ),
-                "Perda se Stop": st.column_config.NumberColumn(
-                    "Perda R$ 🛑",
-                    format="R$ %.0f",
-                    help="Perda em reais se acionar o stop (Quantidade × Diferença de preço)",
                     disabled=True
                 ),
                 "Potencial": st.column_config.TextColumn(
