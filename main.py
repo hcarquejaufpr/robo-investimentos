@@ -826,9 +826,71 @@ with st.sidebar.expander("📊 Quantidade de Ativos (Opcional)", expanded=False)
     
     # Botão de salvar DENTRO do expander para facilitar
     if st.button("💾 SALVAR QUANTIDADES AGORA", type="primary", use_container_width=True, key="save_qty_button"):
-        st.info("✅ Salvando... Aguarde o recarregamento da página!")
-        # Força o salvamento usando o mesmo código do botão principal
-        st.session_state["trigger_save_from_qty"] = True
+        # Executa salvamento direto (mesmo código do botão principal)
+        try:
+            # Carrega portfolio atual
+            current_portfolio = db.load_portfolio(current_username)
+            
+            # Processa quantidades de ativos
+            new_asset_quantities = {}
+            old_asset_quantities = current_portfolio.get("ASSET_QUANTITIES", {})
+            tickers_para_buscar_preco = []
+            
+            # Processa US
+            if "qty_us_df" in st.session_state and st.session_state.qty_us_df is not None:
+                for _, row in st.session_state.qty_us_df.iterrows():
+                    ticker = row["Ticker"]
+                    qty = row["Quantidade"]
+                    if pd.notna(qty) and qty > 0:
+                        if ticker in old_asset_quantities and isinstance(old_asset_quantities[ticker], dict):
+                            new_asset_quantities[ticker] = old_asset_quantities[ticker].copy()
+                            new_asset_quantities[ticker]["quantidade"] = float(qty)
+                        else:
+                            new_asset_quantities[ticker] = {
+                                "quantidade": float(qty),
+                                "preco_entrada": None,
+                                "data_entrada": datetime.now().strftime("%Y-%m-%d")
+                            }
+                            tickers_para_buscar_preco.append(ticker)
+            
+            # Processa BR
+            if "qty_br_df" in st.session_state and st.session_state.qty_br_df is not None:
+                for _, row in st.session_state.qty_br_df.iterrows():
+                    ticker = row["Ticker"]
+                    qty = row["Quantidade"]
+                    if pd.notna(qty) and qty > 0:
+                        if ticker in old_asset_quantities and isinstance(old_asset_quantities[ticker], dict):
+                            new_asset_quantities[ticker] = old_asset_quantities[ticker].copy()
+                            new_asset_quantities[ticker]["quantidade"] = float(qty)
+                        else:
+                            new_asset_quantities[ticker] = {
+                                "quantidade": float(qty),
+                                "preco_entrada": None,
+                                "data_entrada": datetime.now().strftime("%Y-%m-%d")
+                            }
+                            tickers_para_buscar_preco.append(ticker)
+            
+            # Busca preços para novos tickers
+            if tickers_para_buscar_preco:
+                st.info(f"📊 Buscando preços de entrada para {len(tickers_para_buscar_preco)} ativo(s)...")
+                for ticker in tickers_para_buscar_preco:
+                    try:
+                        stock = yf.Ticker(ticker)
+                        hist = stock.history(period="1d")
+                        if not hist.empty:
+                            preco_atual = hist['Close'].iloc[-1]
+                            new_asset_quantities[ticker]["preco_entrada"] = float(preco_atual)
+                    except:
+                        new_asset_quantities[ticker]["preco_entrada"] = 0.0
+            
+            # Atualiza e salva
+            current_portfolio["ASSET_QUANTITIES"] = new_asset_quantities
+            save_user_portfolio(current_username, current_portfolio)
+            
+            st.success(f"✅ {len(new_asset_quantities)} quantidade(s) salva(s)! Recarregando...")
+            st.rerun()
+        except Exception as e:
+            st.error(f"❌ Erro ao salvar: {e}")
 
 # --- Registrar Operação ---
 with st.sidebar.expander("📝 Registrar Operação (Compra/Venda)", expanded=False):
@@ -913,15 +975,7 @@ with st.sidebar.expander("📝 Registrar Operação (Compra/Venda)", expanded=Fa
         else:
             st.error("❌ Ticker é obrigatório!")
 
-# Verifica se foi clicado o botão de salvar do expander de quantidades
-if st.session_state.get("trigger_save_from_qty", False):
-    st.session_state["trigger_save_from_qty"] = False
-    # Aciona o salvamento como se fosse o botão principal
-    save_triggered = True
-else:
-    save_triggered = st.sidebar.button("💾 Salvar Carteira", type="primary", help="Salva sua carteira pessoal (ativos, quantidades e parâmetros). Recarrega automaticamente a página.")
-
-if save_triggered:
+if st.sidebar.button("💾 Salvar Carteira", type="primary", help="Salva sua carteira pessoal (ativos, quantidades e parâmetros). Recarrega automaticamente a página."):
     try:
         # Processa ações americanas
         new_us_stocks = [line.strip() for line in us_stocks_text.split('\n') if line.strip()]
