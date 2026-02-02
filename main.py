@@ -744,6 +744,8 @@ with st.sidebar.expander("📊 Quantidade de Ativos (Opcional)", expanded=False)
     
     # --- 🇺🇸 Quantidades EUA ---
     with st.expander("🇺🇸 Quantidades EUA", expanded=True):
+        st.warning("⚠️ **IMPORTANTE:** Após editar uma célula, pressione ENTER ou TAB antes de salvar!")
+        
         # Prepara DataFrame pré-preenchido com tickers US
         us_data = []
         for ticker in US_STOCKS:
@@ -757,7 +759,7 @@ with st.sidebar.expander("📊 Quantidade de Ativos (Opcional)", expanded=False)
         
         df_us_qty = pd.DataFrame(us_data)
         
-        # Data editor com Ticker bloqueado
+        # Data editor com Ticker bloqueado - disabled_columns removido pois está depreciado
         edited_us_df = st.data_editor(
             df_us_qty,
             column_config={
@@ -769,14 +771,15 @@ with st.sidebar.expander("📊 Quantidade de Ativos (Opcional)", expanded=False)
                 "Quantidade": st.column_config.NumberColumn(
                     "Quantidade",
                     min_value=0,
-                    step=0.000001,
-                    format="%.6f",
-                    help="Quantas ações/cotas você possui (6 casas decimais)"
+                    step=0.1,  # Mudei para 0.1 ao invés de 0.000001
+                    format="%.2f",  # Formato mais simples com 2 casas
+                    help="Quantas ações/cotas você possui. IMPORTANTE: Pressione ENTER após editar!"
                 )
             },
             hide_index=True,
             use_container_width=True,
-            key="qty_us_editor"
+            key="qty_us_editor",
+            num_rows="fixed"  # Impede adicionar/remover linhas
         )
         
         # Armazena o DataFrame editado completo
@@ -836,30 +839,15 @@ with st.sidebar.expander("📊 Quantidade de Ativos (Opcional)", expanded=False)
             old_asset_quantities = current_portfolio.get("ASSET_QUANTITIES", {})
             tickers_para_buscar_preco = []
             
-            # IMPORTANTE: Pega os valores SALVOS no session_state (que foram atualizados pelos data_editors acima)
+            # Pega os valores do session_state (atualizados pelos data_editors acima)
             qty_us_df_saved = st.session_state.get("qty_us_df")
             qty_br_df_saved = st.session_state.get("qty_br_df")
             
-            # Debug: mostra o que tem no session state
-            st.info(f"🔍 Debug: qty_us_df no session_state? {qty_us_df_saved is not None}")
-            st.info(f"🔍 Debug: qty_br_df no session_state? {qty_br_df_saved is not None}")
-            
             # Processa US
             if qty_us_df_saved is not None and not qty_us_df_saved.empty:
-                st.info(f"📊 Processando {len(qty_us_df_saved)} ticker(s) US...")
-                with st.expander("🔍 Ver DataFrame US completo (FORMATO DETALHADO)", expanded=True):
-                    st.write("**Tipo de dados das colunas:**")
-                    st.write(qty_us_df_saved.dtypes)
-                    st.write("\n**Valores RAW (exatos):**")
-                    for idx, row in qty_us_df_saved.iterrows():
-                        st.write(f"- {row['Ticker']}: {repr(row['Quantidade'])} (tipo: {type(row['Quantidade']).__name__})")
-                    st.write("\n**DataFrame completo:**")
-                    st.dataframe(qty_us_df_saved, use_container_width=True)
-                
                 for _, row in qty_us_df_saved.iterrows():
                     ticker = row["Ticker"]
                     qty = row["Quantidade"]
-                    st.write(f"**{ticker}**: Quantidade = {qty} (repr: {repr(qty)}), É válido? {pd.notna(qty) and qty > 0}")
                     
                     if pd.notna(qty) and qty > 0:
                         if ticker in old_asset_quantities and isinstance(old_asset_quantities[ticker], dict):
@@ -907,14 +895,8 @@ with st.sidebar.expander("📊 Quantidade de Ativos (Opcional)", expanded=False)
             current_portfolio["ASSET_QUANTITIES"] = new_asset_quantities
             save_user_portfolio(current_username, current_portfolio)
             
-            # Debug: mostra o que foi salvo
-            st.success(f"✅ {len(new_asset_quantities)} quantidade(s) salva(s)!")
-            with st.expander("🔍 Ver o que foi salvo", expanded=True):
-                st.json(new_asset_quantities)
-            
-            st.warning("⚠️ **PÁGINA NÃO VAI RECARREGAR - Veja as mensagens de debug acima!**")
-            st.info("📸 Tire um print de TODAS as mensagens azuis/amarelas acima e me envie!")
-            # st.rerun()  # DESATIVADO PARA DEBUG
+            st.success(f"✅ {len(new_asset_quantities)} quantidade(s) salva(s)! Recarregando...")
+            st.rerun()
         except Exception as e:
             st.error(f"❌ Erro ao salvar: {e}")
             import traceback
