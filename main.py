@@ -847,13 +847,19 @@ with st.sidebar.expander("📊 Quantidade de Ativos (Opcional)", expanded=False)
             # Processa US
             if qty_us_df_saved is not None and not qty_us_df_saved.empty:
                 st.info(f"📊 Processando {len(qty_us_df_saved)} ticker(s) US...")
-                with st.expander("🔍 Ver DataFrame US completo", expanded=True):
-                    st.dataframe(qty_us_df_saved)
+                with st.expander("🔍 Ver DataFrame US completo (FORMATO DETALHADO)", expanded=True):
+                    st.write("**Tipo de dados das colunas:**")
+                    st.write(qty_us_df_saved.dtypes)
+                    st.write("\n**Valores RAW (exatos):**")
+                    for idx, row in qty_us_df_saved.iterrows():
+                        st.write(f"- {row['Ticker']}: {repr(row['Quantidade'])} (tipo: {type(row['Quantidade']).__name__})")
+                    st.write("\n**DataFrame completo:**")
+                    st.dataframe(qty_us_df_saved, use_container_width=True)
                 
                 for _, row in qty_us_df_saved.iterrows():
                     ticker = row["Ticker"]
                     qty = row["Quantidade"]
-                    st.write(f"**{ticker}**: Quantidade = {qty}, É válido? {pd.notna(qty) and qty > 0}")
+                    st.write(f"**{ticker}**: Quantidade = {qty} (repr: {repr(qty)}), É válido? {pd.notna(qty) and qty > 0}")
                     
                     if pd.notna(qty) and qty > 0:
                         if ticker in old_asset_quantities and isinstance(old_asset_quantities[ticker], dict):
