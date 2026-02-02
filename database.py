@@ -60,10 +60,23 @@ def init_database():
                 us_stocks TEXT,
                 br_fiis TEXT,
                 tesouro_direto TEXT,
+                asset_quantities TEXT,
+                parametros TEXT,
+                individual_multipliers TEXT,
+                operations_history TEXT,
+                portfolio_snapshots TEXT,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (username) REFERENCES users(username) ON DELETE CASCADE
             )
         ''')
+        
+        # Adiciona novas colunas se não existirem (para bancos existentes)
+        for column in ['asset_quantities', 'parametros', 'individual_multipliers', 
+                       'operations_history', 'portfolio_snapshots']:
+            try:
+                cursor.execute(f'ALTER TABLE portfolios ADD COLUMN {column} TEXT')
+            except sqlite3.OperationalError:
+                pass  # Coluna já existe
         
         # Garante que usuário admin existe (atualiza se necessário)
         cursor.execute('SELECT COUNT(*) FROM users WHERE username = ?', ('admin',))
@@ -127,7 +140,7 @@ def load_user_portfolio(username):
     with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute(
-            'SELECT us_stocks, br_fiis, tesouro_direto FROM portfolios WHERE username = ? ORDER BY id DESC LIMIT 1',
+            'SELECT us_stocks, br_fiis, tesouro_direto, asset_quantities, parametros, individual_multipliers, operations_history, portfolio_snapshots FROM portfolios WHERE username = ? ORDER BY id DESC LIMIT 1',
             (username,)
         )
         row = cursor.fetchone()
@@ -136,7 +149,12 @@ def load_user_portfolio(username):
             return {
                 'US_STOCKS': json.loads(row['us_stocks']) if row['us_stocks'] else [],
                 'BR_FIIS': json.loads(row['br_fiis']) if row['br_fiis'] else [],
-                'TESOURO_DIRETO': json.loads(row['tesouro_direto']) if row['tesouro_direto'] else {}
+                'TESOURO_DIRETO': json.loads(row['tesouro_direto']) if row['tesouro_direto'] else {},
+                'ASSET_QUANTITIES': json.loads(row['asset_quantities']) if row['asset_quantities'] else {},
+                'PARAMETROS': json.loads(row['parametros']) if row['parametros'] else {},
+                'INDIVIDUAL_MULTIPLIERS': json.loads(row['individual_multipliers']) if row['individual_multipliers'] else {},
+                'OPERATIONS_HISTORY': json.loads(row['operations_history']) if row['operations_history'] else [],
+                'PORTFOLIO_SNAPSHOTS': json.loads(row['portfolio_snapshots']) if row['portfolio_snapshots'] else []
             }
         return None
 
@@ -148,15 +166,22 @@ def save_user_portfolio(username, portfolio):
         # Remove carteira anterior (mantém histórico se necessário)
         cursor.execute('DELETE FROM portfolios WHERE username = ?', (username,))
         
-        # Insere nova carteira
+        # Insere nova carteira COM TODAS AS COLUNAS
         cursor.execute(
-            '''INSERT INTO portfolios (username, us_stocks, br_fiis, tesouro_direto) 
-               VALUES (?, ?, ?, ?)''',
+            '''INSERT INTO portfolios (username, us_stocks, br_fiis, tesouro_direto, 
+                                        asset_quantities, parametros, individual_multipliers, 
+                                        operations_history, portfolio_snapshots) 
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
             (
                 username,
                 json.dumps(portfolio.get('US_STOCKS', [])),
                 json.dumps(portfolio.get('BR_FIIS', [])),
-                json.dumps(portfolio.get('TESOURO_DIRETO', {}))
+                json.dumps(portfolio.get('TESOURO_DIRETO', {})),
+                json.dumps(portfolio.get('ASSET_QUANTITIES', {})),
+                json.dumps(portfolio.get('PARAMETROS', {})),
+                json.dumps(portfolio.get('INDIVIDUAL_MULTIPLIERS', {})),
+                json.dumps(portfolio.get('OPERATIONS_HISTORY', [])),
+                json.dumps(portfolio.get('PORTFOLIO_SNAPSHOTS', []))
             )
         )
         return True
