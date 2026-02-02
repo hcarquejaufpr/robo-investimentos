@@ -887,10 +887,17 @@ with st.sidebar.expander("📊 Quantidade de Ativos (Opcional)", expanded=False)
             current_portfolio["ASSET_QUANTITIES"] = new_asset_quantities
             save_user_portfolio(current_username, current_portfolio)
             
-            st.success(f"✅ {len(new_asset_quantities)} quantidade(s) salva(s)! Recarregando...")
+            # Debug: mostra o que foi salvo
+            st.success(f"✅ {len(new_asset_quantities)} quantidade(s) salva(s)!")
+            with st.expander("🔍 Ver o que foi salvo", expanded=True):
+                st.json(new_asset_quantities)
+            
+            st.info("♻️ Recarregando página...")
             st.rerun()
         except Exception as e:
             st.error(f"❌ Erro ao salvar: {e}")
+            import traceback
+            st.code(traceback.format_exc())
 
 # --- Registrar Operação ---
 with st.sidebar.expander("📝 Registrar Operação (Compra/Venda)", expanded=False):
