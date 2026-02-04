@@ -78,11 +78,13 @@ def init_database():
                 cursor.execute(f'ALTER TABLE portfolios ADD COLUMN {column} TEXT')
             except sqlite3.OperationalError:
                 pass  # Coluna já existe
-                # Restaura usuários do backup se banco estiver vazio
+        
+        # Restaura usuários do backup se banco estiver vazio
         cursor.execute('SELECT COUNT(*) FROM users')
         if cursor.fetchone()[0] == 0:
             restore_users_from_backup()
-                # Garante que usuário admin existe (atualiza se necessário)
+        
+        # Garante que usuário admin existe (atualiza se necessário)
         cursor.execute('SELECT COUNT(*) FROM users WHERE username = ?', ('admin',))
         if cursor.fetchone()[0] == 0:
             cursor.execute(
