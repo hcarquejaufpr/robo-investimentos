@@ -145,18 +145,23 @@ def import_database_from_dict(data):
 
 def backup_to_google_sheets():
     """Faz backup do banco para Google Sheets."""
+    print("🔍 [DEBUG BACKUP] backup_to_google_sheets() iniciado")
     client = get_google_sheets_client()
     if not client:
+        print("⚠️ [DEBUG BACKUP] Cliente Google Sheets não disponível")
         return backup_to_local_json()
     
     try:
         # Nome da planilha (configurável nos secrets)
         sheet_name = st.secrets.get('backup_sheet_name', 'RoboInvestimentos_Backup')
+        print(f"🔍 [DEBUG BACKUP] Tentando abrir planilha: {sheet_name}")
         
         # Abre ou cria a planilha
         try:
             spreadsheet = client.open(sheet_name)
+            print(f"✅ [BACKUP] Planilha aberta com sucesso: {sheet_name}")
         except gspread.SpreadsheetNotFound:
+            print(f"⚠️ [DEBUG BACKUP] Planilha não encontrada, tentando criar...")
             spreadsheet = client.create(sheet_name)
             print(f"✅ Planilha criada: {sheet_name}")
             
