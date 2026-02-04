@@ -10,6 +10,15 @@ import os
 from datetime import datetime
 from contextlib import contextmanager
 
+# Importa backup manager se disponível
+try:
+    import backup_manager
+    BACKUP_ENABLED = True
+    print("✅ [BACKUP] Sistema de backup carregado!")
+except ImportError as e:
+    BACKUP_ENABLED = False
+    print(f"⚠️ [BACKUP] Não disponível: {e}")
+
 # Caminho do banco de dados (será montado em volume Docker)
 DB_PATH = os.path.join(os.path.dirname(__file__), 'data', 'robo_investimentos.db')
 BACKUP_PATH = os.path.join(os.path.dirname(__file__), 'data', 'users_backup.json')
@@ -25,6 +34,12 @@ def get_db_connection():
     try:
         yield conn
         conn.commit()
+        # Backup automático após commit
+        if BACKUP_ENABLED:
+            try:
+                backup_manager.auto_backup()
+            except Exception as e:
+                print(f"⚠️ [BACKUP] Erro: {e}")
     except Exception as e:
         conn.rollback()
         raise e
