@@ -9,37 +9,6 @@ import json
 import os
 from datetime import datetime
 from contextlib import contextmanager
-import sys
-
-print("=" * 80)
-print("🔍 [DEBUG] Iniciando importação do módulo database.py")
-print(f"🔍 [DEBUG] Python version: {sys.version}")
-print(f"🔍 [DEBUG] Diretório atual: {os.getcwd()}")
-print(f"🔍 [DEBUG] Arquivos no diretório: {os.listdir('.')}")
-print("=" * 80)
-
-# Importa backup manager se disponível
-print("🔍 [DEBUG] Tentando importar backup_manager...")
-try:
-    import backup_manager
-    BACKUP_ENABLED = True
-    print("✅ [BACKUP] Sistema de backup carregado com sucesso!")
-    print(f"🔍 [DEBUG] backup_manager importado de: {backup_manager.__file__}")
-except ImportError as e:
-    BACKUP_ENABLED = False
-    print(f"❌ [BACKUP] Erro ao importar backup_manager: {e}")
-    print(f"🔍 [DEBUG] Tipo de erro: {type(e).__name__}")
-    import traceback
-    print("🔍 [DEBUG] Traceback completo:")
-    traceback.print_exc()
-except Exception as e:
-    BACKUP_ENABLED = False
-    print(f"❌ [BACKUP] Erro inesperado ao importar backup_manager: {e}")
-    import traceback
-    traceback.print_exc()
-
-print(f"🔍 [DEBUG] BACKUP_ENABLED = {BACKUP_ENABLED}")
-print("=" * 80)
 
 # Caminho do banco de dados (será montado em volume Docker)
 DB_PATH = os.path.join(os.path.dirname(__file__), 'data', 'robo_investimentos.db')
@@ -56,15 +25,6 @@ def get_db_connection():
     try:
         yield conn
         conn.commit()
-        # Backup automático após commit
-        if BACKUP_ENABLED:
-            print("[BACKUP] Executando backup automático...")
-            try:
-                backup_manager.auto_backup()
-            except Exception as e:
-                print(f"❌ [BACKUP] Erro no backup automático: {e}")
-        else:
-            print("⚠️ [BACKUP] Sistema de backup desabilitado")
     except Exception as e:
         conn.rollback()
         raise e
@@ -73,11 +33,6 @@ def get_db_connection():
 
 def init_database():
     """Inicializa o banco de dados com as tabelas necessárias."""
-    print("=" * 80)
-    print("🔍 [DEBUG] Função init_database() chamada")
-    print(f"🔍 [DEBUG] BACKUP_ENABLED dentro de init_database: {BACKUP_ENABLED}")
-    print("=" * 80)
-    
     with get_db_connection() as conn:
         cursor = conn.cursor()
         
@@ -120,53 +75,23 @@ def init_database():
         for column in ['asset_quantities', 'parametros', 'individual_multipliers', 
                        'operations_history', 'portfolio_snapshots']:
             try:
-        print("🔍 [DEBUG] Checkpoint: antes de verificar BACKUP_ENABLED para restore")
-        print(f"🔍 [DEBUG] Valor de BACKUP_ENABLED: {BACKUP_ENABLED}")
-        
-        if BACKUP_ENABLED:
-            print("✅ [BACKUP] BACKUP_ENABLED é True - iniciando restore")
-            print("[BACKUP] Verificando se precisa restaurar dados...")
-            try:
-                backup_manager.auto_restore()
-                print("✅ [BACKUP] auto_restore() executado")
-            except Exception as e:
-                print(f"❌ [BACKUP] Erro ao executar auto_restore: {e}")
-                import traceback
-                traceback.print_exc()
-        else:
-            print("⚠️ [BACKUP] Sistema de backup desabilitado - restore não disponível")
-            print(f"🔍 [DEBUG] BACKUP_ENABLED = {BACKUP_ENABLED}
-        if BACKUP_ENABLED:
-            print("[BACKUP] Verificando se precisa restaurar dados...")
-            backup_manager.auto_restore()
-        else:
-            print("⚠️ [BACKUP] Sistema de backup desabilitado - restore não disponível")
+                cursor.execute(f'ALTER TABLE portfolios ADD COLUMN {column} TEXT')
+            except sqlite3.OperationalError:
+                pass  # Coluna já existe
         
         # Restaura usuários do backup se banco estiver vazio
         cursor.execute('SELECT COUNT(*) FROM users')
-        user_count = cursor.fetchone()[0]
-        print(f"[INIT] Usuários no banco: {user_count}")
-        
-        if user_count == 0:
-            print("[INIT] Banco vazio, tentando restaurar do backup...")
-            restored = restore_users_from_backup()
-            if restored:
-                print("[INIT] Usuários restaurados do backup com sucesso!")
-            else:
-                print("[INIT] Backup não disponível, criando apenas admin...")
+        if cursor.fetchone()[0] == 0:
+            restore_users_from_backup()
         
         # Garante que usuário admin existe (atualiza se necessário)
         cursor.execute('SELECT COUNT(*) FROM users WHERE username = ?', ('admin',))
-        admin_exists = cursor.fetchone()[0]
-        
-        if admin_exists == 0:
-            print("[INIT] Criando usuário admin...")
+        if cursor.fetchone()[0] == 0:
             cursor.execute(
                 'INSERT INTO users (username, password, name, email) VALUES (?, ?, ?, ?)',
                 ('admin', 'investidor2026', 'Administrador', 'admin@robo-investimentos.com')
             )
         else:
-            print("[INIT] Usuário admin já existe")
             # Atualiza email se estiver vazio
             cursor.execute(
                 'UPDATE users SET email = ? WHERE username = ? AND (email IS NULL OR email = "")',
@@ -206,21 +131,14 @@ def backup_users():
 def restore_users_from_backup():
     """Restaura usuários do arquivo de backup."""
     try:
-        print(f"[RESTORE] Procurando backup em: {BACKUP_PATH}")
-        
         if not os.path.exists(BACKUP_PATH):
-            print(f"[RESTORE] Arquivo de backup não encontrado!")
             return False
         
-        print(f"[RESTORE] Arquivo encontrado, lendo...")
         with open(BACKUP_PATH, 'r', encoding='utf-8') as f:
             users = json.load(f)
         
-        print(f"[RESTORE] {len(users)} usuários no backup: {list(users.keys())}")
-        
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            restored = 0
             for username, data in users.items():
                 # Verifica se usuário já existe
                 cursor.execute('SELECT COUNT(*) FROM users WHERE username = ?', (username,))
@@ -229,16 +147,11 @@ def restore_users_from_backup():
                         'INSERT INTO users (username, password, name, email) VALUES (?, ?, ?, ?)',
                         (username, data['password'], data['name'], data.get('email', ''))
                     )
-                    restored += 1
-                    print(f"[RESTORE] Usuário '{username}' restaurado")
             conn.commit()
         
-        print(f"[RESTORE] {restored} usuários restaurados com sucesso")
         return True
     except Exception as e:
-        print(f"[RESTORE] Erro ao restaurar backup: {e}")
-        import traceback
-        traceback.print_exc()
+        print(f"Erro ao restaurar backup: {e}")
         return False
 
 # ============================================================================
