@@ -9,15 +9,37 @@ import json
 import os
 from datetime import datetime
 from contextlib import contextmanager
+import sys
+
+print("=" * 80)
+print("🔍 [DEBUG] Iniciando importação do módulo database.py")
+print(f"🔍 [DEBUG] Python version: {sys.version}")
+print(f"🔍 [DEBUG] Diretório atual: {os.getcwd()}")
+print(f"🔍 [DEBUG] Arquivos no diretório: {os.listdir('.')}")
+print("=" * 80)
 
 # Importa backup manager se disponível
+print("🔍 [DEBUG] Tentando importar backup_manager...")
 try:
     import backup_manager
     BACKUP_ENABLED = True
     print("✅ [BACKUP] Sistema de backup carregado com sucesso!")
+    print(f"🔍 [DEBUG] backup_manager importado de: {backup_manager.__file__}")
 except ImportError as e:
     BACKUP_ENABLED = False
-    print(f"⚠️ [BACKUP] backup_manager não disponível: {e}")
+    print(f"❌ [BACKUP] Erro ao importar backup_manager: {e}")
+    print(f"🔍 [DEBUG] Tipo de erro: {type(e).__name__}")
+    import traceback
+    print("🔍 [DEBUG] Traceback completo:")
+    traceback.print_exc()
+except Exception as e:
+    BACKUP_ENABLED = False
+    print(f"❌ [BACKUP] Erro inesperado ao importar backup_manager: {e}")
+    import traceback
+    traceback.print_exc()
+
+print(f"🔍 [DEBUG] BACKUP_ENABLED = {BACKUP_ENABLED}")
+print("=" * 80)
 
 # Caminho do banco de dados (será montado em volume Docker)
 DB_PATH = os.path.join(os.path.dirname(__file__), 'data', 'robo_investimentos.db')
@@ -51,6 +73,11 @@ def get_db_connection():
 
 def init_database():
     """Inicializa o banco de dados com as tabelas necessárias."""
+    print("=" * 80)
+    print("🔍 [DEBUG] Função init_database() chamada")
+    print(f"🔍 [DEBUG] BACKUP_ENABLED dentro de init_database: {BACKUP_ENABLED}")
+    print("=" * 80)
+    
     with get_db_connection() as conn:
         cursor = conn.cursor()
         
@@ -93,11 +120,22 @@ def init_database():
         for column in ['asset_quantities', 'parametros', 'individual_multipliers', 
                        'operations_history', 'portfolio_snapshots']:
             try:
-                cursor.execute(f'ALTER TABLE portfolios ADD COLUMN {column} TEXT')
-            except sqlite3.OperationalError:
-                pass  # Coluna já existe
+        print("🔍 [DEBUG] Checkpoint: antes de verificar BACKUP_ENABLED para restore")
+        print(f"🔍 [DEBUG] Valor de BACKUP_ENABLED: {BACKUP_ENABLED}")
         
-        # Tenta restaurar do backup automático (Google Sheets ou JSON)
+        if BACKUP_ENABLED:
+            print("✅ [BACKUP] BACKUP_ENABLED é True - iniciando restore")
+            print("[BACKUP] Verificando se precisa restaurar dados...")
+            try:
+                backup_manager.auto_restore()
+                print("✅ [BACKUP] auto_restore() executado")
+            except Exception as e:
+                print(f"❌ [BACKUP] Erro ao executar auto_restore: {e}")
+                import traceback
+                traceback.print_exc()
+        else:
+            print("⚠️ [BACKUP] Sistema de backup desabilitado - restore não disponível")
+            print(f"🔍 [DEBUG] BACKUP_ENABLED = {BACKUP_ENABLED}
         if BACKUP_ENABLED:
             print("[BACKUP] Verificando se precisa restaurar dados...")
             backup_manager.auto_restore()

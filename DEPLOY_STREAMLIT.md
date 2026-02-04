@@ -76,8 +76,8 @@ Robo_Investimentos/
 
 - O Streamlit Community Cloud tem **1GB de RAM**
 - Limite de **1GB de armazenamento**
-- O banco SQLite será recriado a cada deploy (dados não persistem)
-- Para dados persistentes, considere usar banco de dados externo
+- ✅ **BACKUP AUTOMÁTICO CONFIGURADO**: Os dados agora persistem via Google Sheets!
+- 📖 Veja [CONFIGURAR_BACKUP_PERSISTENTE.md](CONFIGURAR_BACKUP_PERSISTENTE.md) para instruções
 
 ## 🌐 Após Deploy
 
@@ -108,8 +108,9 @@ git push
 - Exemplo: `streamlit==1.30.0`
 
 **Banco de dados vazio após deploy:**
-- Dados SQLite não persistem no Streamlit Cloud
-- Use banco externo (PostgreSQL, MySQL) ou Streamlit Cloud Database
+- ✅ **SOLUÇÃO IMPLEMENTADA**: Backup automático via Google Sheets
+- 📖 Siga o guia: [CONFIGURAR_BACKUP_PERSISTENTE.md](CONFIGURAR_BACKUP_PERSISTENTE.md)
+- Após configurado, os dados persistem automaticamente!
 
 ## 💡 Dicas
 

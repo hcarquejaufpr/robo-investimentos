@@ -4,11 +4,17 @@ Sistema de Backup Automático para Persistência no Streamlit Cloud
 Faz backup do SQLite para Google Sheets para garantir persistência.
 """
 
+print("=" * 80)
+print("🔍 [DEBUG BACKUP] Módulo backup_manager.py sendo carregado")
+print("=" * 80)
+
 import sqlite3
 import json
 import os
 from datetime import datetime
 import streamlit as st
+
+print("🔍 [DEBUG BACKUP] Imports básicos OK")
 
 # Tenta importar gspread (Google Sheets)
 try:
