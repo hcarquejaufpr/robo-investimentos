@@ -14,9 +14,10 @@ from contextlib import contextmanager
 try:
     import backup_manager
     BACKUP_ENABLED = True
-except ImportError:
+    print("✅ [BACKUP] Sistema de backup carregado com sucesso!")
+except ImportError as e:
     BACKUP_ENABLED = False
-    print("⚠️ backup_manager não disponível")
+    print(f"⚠️ [BACKUP] backup_manager não disponível: {e}")
 
 # Caminho do banco de dados (será montado em volume Docker)
 DB_PATH = os.path.join(os.path.dirname(__file__), 'data', 'robo_investimentos.db')
@@ -35,10 +36,13 @@ def get_db_connection():
         conn.commit()
         # Backup automático após commit
         if BACKUP_ENABLED:
+            print("[BACKUP] Executando backup automático...")
             try:
                 backup_manager.auto_backup()
             except Exception as e:
-                print(f"⚠️ Erro no backup automático: {e}")
+                print(f"❌ [BACKUP] Erro no backup automático: {e}")
+        else:
+            print("⚠️ [BACKUP] Sistema de backup desabilitado")
     except Exception as e:
         conn.rollback()
         raise e
@@ -95,7 +99,10 @@ def init_database():
         
         # Tenta restaurar do backup automático (Google Sheets ou JSON)
         if BACKUP_ENABLED:
+            print("[BACKUP] Verificando se precisa restaurar dados...")
             backup_manager.auto_restore()
+        else:
+            print("⚠️ [BACKUP] Sistema de backup desabilitado - restore não disponível")
         
         # Restaura usuários do backup se banco estiver vazio
         cursor.execute('SELECT COUNT(*) FROM users')
