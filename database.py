@@ -10,6 +10,14 @@ import os
 from datetime import datetime
 from contextlib import contextmanager
 
+# Importa backup manager se disponível
+try:
+    import backup_manager
+    BACKUP_ENABLED = True
+except ImportError:
+    BACKUP_ENABLED = False
+    print("⚠️ backup_manager não disponível")
+
 # Caminho do banco de dados (será montado em volume Docker)
 DB_PATH = os.path.join(os.path.dirname(__file__), 'data', 'robo_investimentos.db')
 BACKUP_PATH = os.path.join(os.path.dirname(__file__), 'data', 'users_backup.json')
@@ -25,6 +33,12 @@ def get_db_connection():
     try:
         yield conn
         conn.commit()
+        # Backup automático após commit
+        if BACKUP_ENABLED:
+            try:
+                backup_manager.auto_backup()
+            except Exception as e:
+                print(f"⚠️ Erro no backup automático: {e}")
     except Exception as e:
         conn.rollback()
         raise e
@@ -79,19 +93,35 @@ def init_database():
             except sqlite3.OperationalError:
                 pass  # Coluna já existe
         
+        # Tenta restaurar do backup automático (Google Sheets ou JSON)
+        if BACKUP_ENABLED:
+            backup_manager.auto_restore()
+        
         # Restaura usuários do backup se banco estiver vazio
         cursor.execute('SELECT COUNT(*) FROM users')
-        if cursor.fetchone()[0] == 0:
-            restore_users_from_backup()
+        user_count = cursor.fetchone()[0]
+        print(f"[INIT] Usuários no banco: {user_count}")
+        
+        if user_count == 0:
+            print("[INIT] Banco vazio, tentando restaurar do backup...")
+            restored = restore_users_from_backup()
+            if restored:
+                print("[INIT] Usuários restaurados do backup com sucesso!")
+            else:
+                print("[INIT] Backup não disponível, criando apenas admin...")
         
         # Garante que usuário admin existe (atualiza se necessário)
         cursor.execute('SELECT COUNT(*) FROM users WHERE username = ?', ('admin',))
-        if cursor.fetchone()[0] == 0:
+        admin_exists = cursor.fetchone()[0]
+        
+        if admin_exists == 0:
+            print("[INIT] Criando usuário admin...")
             cursor.execute(
                 'INSERT INTO users (username, password, name, email) VALUES (?, ?, ?, ?)',
                 ('admin', 'investidor2026', 'Administrador', 'admin@robo-investimentos.com')
             )
         else:
+            print("[INIT] Usuário admin já existe")
             # Atualiza email se estiver vazio
             cursor.execute(
                 'UPDATE users SET email = ? WHERE username = ? AND (email IS NULL OR email = "")',
@@ -131,14 +161,21 @@ def backup_users():
 def restore_users_from_backup():
     """Restaura usuários do arquivo de backup."""
     try:
+        print(f"[RESTORE] Procurando backup em: {BACKUP_PATH}")
+        
         if not os.path.exists(BACKUP_PATH):
+            print(f"[RESTORE] Arquivo de backup não encontrado!")
             return False
         
+        print(f"[RESTORE] Arquivo encontrado, lendo...")
         with open(BACKUP_PATH, 'r', encoding='utf-8') as f:
             users = json.load(f)
         
+        print(f"[RESTORE] {len(users)} usuários no backup: {list(users.keys())}")
+        
         with get_db_connection() as conn:
             cursor = conn.cursor()
+            restored = 0
             for username, data in users.items():
                 # Verifica se usuário já existe
                 cursor.execute('SELECT COUNT(*) FROM users WHERE username = ?', (username,))
@@ -147,11 +184,16 @@ def restore_users_from_backup():
                         'INSERT INTO users (username, password, name, email) VALUES (?, ?, ?, ?)',
                         (username, data['password'], data['name'], data.get('email', ''))
                     )
+                    restored += 1
+                    print(f"[RESTORE] Usuário '{username}' restaurado")
             conn.commit()
         
+        print(f"[RESTORE] {restored} usuários restaurados com sucesso")
         return True
     except Exception as e:
-        print(f"Erro ao restaurar backup: {e}")
+        print(f"[RESTORE] Erro ao restaurar backup: {e}")
+        import traceback
+        traceback.print_exc()
         return False
 
 # ============================================================================
