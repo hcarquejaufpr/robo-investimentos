@@ -10,14 +10,27 @@ import os
 from datetime import datetime
 from contextlib import contextmanager
 
+print("=" * 80)
+print("🔍 [DEBUG] database.py sendo carregado...")
+print(f"🔍 [DEBUG] Diretório: {os.getcwd()}")
+print(f"🔍 [DEBUG] Arquivos no diretório: {os.listdir('.')}")
+print("=" * 80)
+
 # Importa backup manager se disponível
+BACKUP_ENABLED = False
+print("🔍 [DEBUG] Tentando importar backup_manager...")
 try:
     import backup_manager
     BACKUP_ENABLED = True
     print("✅ [BACKUP] Sistema de backup carregado!")
+    print(f"🔍 [DEBUG] backup_manager file: {backup_manager.__file__}")
 except ImportError as e:
-    BACKUP_ENABLED = False
-    print(f"⚠️ [BACKUP] Não disponível: {e}")
+    print(f"❌ [BACKUP] ImportError: {e}")
+except Exception as e:
+    print(f"❌ [BACKUP] Erro inesperado: {e}")
+
+print(f"🔍 [DEBUG] BACKUP_ENABLED = {BACKUP_ENABLED}")
+print("=" * 80)
 
 # Caminho do banco de dados (será montado em volume Docker)
 DB_PATH = os.path.join(os.path.dirname(__file__), 'data', 'robo_investimentos.db')
@@ -34,12 +47,19 @@ def get_db_connection():
     try:
         yield conn
         conn.commit()
+        print(f"🔍 [DEBUG] Após commit - BACKUP_ENABLED = {BACKUP_ENABLED}")
         # Backup automático após commit
         if BACKUP_ENABLED:
+            print("🔍 [DEBUG] BACKUP_ENABLED é True, chamando auto_backup()...")
             try:
                 backup_manager.auto_backup()
+                print("✅ [BACKUP] auto_backup() executado com sucesso")
             except Exception as e:
-                print(f"⚠️ [BACKUP] Erro: {e}")
+                print(f"❌ [BACKUP] Erro em auto_backup(): {e}")
+                import traceback
+                traceback.print_exc()
+        else:
+            print("⚠️ [DEBUG] BACKUP_ENABLED é False, backup não executado")
     except Exception as e:
         conn.rollback()
         raise e

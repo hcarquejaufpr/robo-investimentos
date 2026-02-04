@@ -14,7 +14,7 @@ import os
 from datetime import datetime
 import streamlit as st
 
-print("🔍 [DEBUG BACKUP] Imports básicos OK")
+print("🔍 [DEBUG BACKUP] Imports OK")
 
 # Tenta importar gspread (Google Sheets)
 try:
@@ -263,9 +263,15 @@ def restore_from_local_json():
 
 def auto_backup():
     """Executa backup automático (tenta Google Sheets, fallback para local)."""
+    print("🔍 [DEBUG BACKUP] auto_backup() chamado!")
+    print(f"🔍 [DEBUG BACKUP] GSPREAD_AVAILABLE = {GSPREAD_AVAILABLE}")
+    print(f"🔍 [DEBUG BACKUP] st.secrets disponível = {'gcp_service_account' in st.secrets if hasattr(st, 'secrets') else 'N/A'}")
+    
     if GSPREAD_AVAILABLE and 'gcp_service_account' in st.secrets:
+        print("🔍 [DEBUG BACKUP] Tentando backup Google Sheets...")
         return backup_to_google_sheets()
     else:
+        print("🔍 [DEBUG BACKUP] Usando backup JSON local...")
         return backup_to_local_json()
 
 
