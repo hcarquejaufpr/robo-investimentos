@@ -1,0 +1,17 @@
+{
+  "admin": {
+    "password": "investidor2026",
+    "name": "Administrador",
+    "email": "admin@robo-investimentos.com"
+  },
+  "teste_user": {
+    "password": "senha123",
+    "name": "Usuário Teste",
+    "email": "teste@email.com"
+  },
+  "hcarqueja": {
+    "password": "135678",
+    "name": "Henrique Carqueja",
+    "email": "hcarqueja@gmail.com"
+  }
+}

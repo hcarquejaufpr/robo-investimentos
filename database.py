@@ -12,6 +12,7 @@ from contextlib import contextmanager
 
 # Caminho do banco de dados (será montado em volume Docker)
 DB_PATH = os.path.join(os.path.dirname(__file__), 'data', 'robo_investimentos.db')
+BACKUP_PATH = os.path.join(os.path.dirname(__file__), 'data', 'users_backup.json')
 
 # Garante que o diretório existe
 os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
@@ -77,8 +78,11 @@ def init_database():
                 cursor.execute(f'ALTER TABLE portfolios ADD COLUMN {column} TEXT')
             except sqlite3.OperationalError:
                 pass  # Coluna já existe
-        
-        # Garante que usuário admin existe (atualiza se necessário)
+                # Restaura usuários do backup se banco estiver vazio
+        cursor.execute('SELECT COUNT(*) FROM users')
+        if cursor.fetchone()[0] == 0:
+            restore_users_from_backup()
+                # Garante que usuário admin existe (atualiza se necessário)
         cursor.execute('SELECT COUNT(*) FROM users WHERE username = ?', ('admin',))
         if cursor.fetchone()[0] == 0:
             cursor.execute(
@@ -93,6 +97,60 @@ def init_database():
             )
         
         conn.commit()
+
+# ============================================================================
+# FUNÇÕES DE BACKUP/RESTORE
+# ============================================================================
+
+def backup_users():
+    """Faz backup dos usuários em arquivo JSON."""
+    try:
+        users = {}
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT username, password, name, email FROM users')
+            rows = cursor.fetchall()
+            
+            for row in rows:
+                users[row['username']] = {
+                    'password': row['password'],
+                    'name': row['name'],
+                    'email': row['email'] if row['email'] else ''
+                }
+        
+        with open(BACKUP_PATH, 'w', encoding='utf-8') as f:
+            json.dump(users, f, indent=2, ensure_ascii=False)
+        
+        return True
+    except Exception as e:
+        print(f"Erro ao fazer backup: {e}")
+        return False
+
+def restore_users_from_backup():
+    """Restaura usuários do arquivo de backup."""
+    try:
+        if not os.path.exists(BACKUP_PATH):
+            return False
+        
+        with open(BACKUP_PATH, 'r', encoding='utf-8') as f:
+            users = json.load(f)
+        
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            for username, data in users.items():
+                # Verifica se usuário já existe
+                cursor.execute('SELECT COUNT(*) FROM users WHERE username = ?', (username,))
+                if cursor.fetchone()[0] == 0:
+                    cursor.execute(
+                        'INSERT INTO users (username, password, name, email) VALUES (?, ?, ?, ?)',
+                        (username, data['password'], data['name'], data.get('email', ''))
+                    )
+            conn.commit()
+        
+        return True
+    except Exception as e:
+        print(f"Erro ao restaurar backup: {e}")
+        return False
 
 # ============================================================================
 # FUNÇÕES DE USUÁRIOS
@@ -122,6 +180,8 @@ def save_user(username, password, name, email=''):
             'INSERT INTO users (username, password, name, email) VALUES (?, ?, ?, ?)',
             (username, password, name, email)
         )
+        # Faz backup automático após criar usuário
+        backup_users()
         return True
 
 def user_exists(username):

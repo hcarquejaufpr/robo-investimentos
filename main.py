@@ -266,6 +266,21 @@ def login_register_page():
                 st.rerun()
             else:
                 st.error("❌ Usuário ou senha incorretos!")
+                
+                # Mensagem adicional para ambiente cloud
+                st.warning("""
+                ⚠️ **Problema com login?**
+                
+                Se você cadastrou seu usuário anteriormente e agora não consegue mais acessar,
+                pode ser que o banco de dados tenha sido reiniciado (comum no Streamlit Cloud).
+                
+                **Solução:**
+                1. Vá para a aba "Cadastro"
+                2. Cadastre-se novamente com o mesmo usuário e senha
+                3. Sua carteira pode ser recuperada após o login
+                
+                Para suporte, entre em contato com o administrador.
+                """)
     
     # ========== ABA DE CADASTRO ==========
     with tab2:
