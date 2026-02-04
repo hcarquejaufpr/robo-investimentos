@@ -16,8 +16,15 @@ import database as db
 st.cache_data.clear()
 st.cache_resource.clear()
 
+print("=" * 60)
+print("🚀 INICIANDO APLICAÇÃO ROBÔ DE INVESTIMENTOS")
+print("=" * 60)
+
 # Inicializa banco de dados
+print("📦 Inicializando banco de dados...")
 db.init_database()
+print("✅ Banco de dados inicializado!")
+print("=" * 60)
 
 # Desabilita verificação SSL (necessário em algumas redes corporativas)
 ssl._create_default_https_context = ssl._create_unverified_context
