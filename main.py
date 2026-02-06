@@ -1301,91 +1301,91 @@ with st.sidebar.expander("📊 Quantidades de Ativos", expanded=False):
         st.markdown("### 💾 Clique aqui para salvar as quantidades:")
         
         if st.button("💾 SALVAR QUANTIDADES AGORA", type="primary", use_container_width=True, key="save_quantities_main"):
-        try:
-            new_asset_quantities = dict(ASSET_QUANTITIES)
-            tickers_para_buscar_preco = []
-            
-            # Processa quantidades US
-            if "qty_us_df" in st.session_state and st.session_state.qty_us_df is not None:
-                for _, row in st.session_state.qty_us_df.iterrows():
-                    ticker = str(row["Ticker"]).strip().upper()
-                    qty = row["Quantidade"]
-                    
-                    if not ticker or pd.isna(ticker) or ticker == "" or ticker == "NAN":
-                        continue
-                    
-                    if pd.notna(qty) and qty > 0:
-                        if ticker in new_asset_quantities and isinstance(new_asset_quantities[ticker], dict):
-                            new_asset_quantities[ticker]["quantidade"] = float(qty)
-                        else:
-                            new_asset_quantities[ticker] = {
-                                "quantidade": float(qty),
-                                "preco_entrada": None,
-                                "data_entrada": datetime.now().strftime("%Y-%m-%d")
-                            }
-                            tickers_para_buscar_preco.append(ticker)
-            
-            # Processa quantidades BR
-            if "qty_br_df" in st.session_state and st.session_state.qty_br_df is not None:
-                for _, row in st.session_state.qty_br_df.iterrows():
-                    ticker = str(row["Ticker"]).strip().upper()
-                    qty = row["Quantidade"]
-                    
-                    if not ticker or pd.isna(ticker) or ticker == "" or ticker == "NAN":
-                        continue
-                    
-                    if pd.notna(qty) and qty > 0:
-                        if ticker in new_asset_quantities and isinstance(new_asset_quantities[ticker], dict):
-                            new_asset_quantities[ticker]["quantidade"] = float(qty)
-                        else:
-                            new_asset_quantities[ticker] = {
-                                "quantidade": float(qty),
-                                "preco_entrada": None,
-                                "data_entrada": datetime.now().strftime("%Y-%m-%d")
-                            }
-                            tickers_para_buscar_preco.append(ticker)
-            
-            # Busca preços para novos tickers
-            if tickers_para_buscar_preco:
-                with st.spinner(f"Buscando preços para {len(tickers_para_buscar_preco)} ativo(s)..."):
-                    for ticker in tickers_para_buscar_preco:
-                        try:
-                            stock = yf.Ticker(ticker)
-                            hist = stock.history(period="1d")
-                            if not hist.empty:
-                                preco_atual = hist['Close'].iloc[-1]
-                                new_asset_quantities[ticker]["preco_entrada"] = float(preco_atual)
-                        except:
-                            new_asset_quantities[ticker]["preco_entrada"] = 0.0
-            
-            # Salva apenas as quantidades (preserva todo o resto)
-            portfolio_to_save = {
-                "US_STOCKS": US_STOCKS,
-                "BR_FIIS": BR_FIIS,
-                "TESOURO_DIRETO": TESOURO_DIRETO,
-                "ASSET_QUANTITIES": new_asset_quantities,
-                "PARAMETROS": PARAMETROS,
-                "INDIVIDUAL_MULTIPLIERS": INDIVIDUAL_MULTIPLIERS,
-                "OPERATIONS_HISTORY": OPERATIONS_HISTORY,
-                "PORTFOLIO_SNAPSHOTS": PORTFOLIO_SNAPSHOTS
-            }
-            save_user_portfolio(current_username, portfolio_to_save)
-            
-            # Atualiza variável global
-            ASSET_QUANTITIES.clear()
-            ASSET_QUANTITIES.update(new_asset_quantities)
-            
-            # Limpa cache para forçar recálculo das tabelas
-            st.cache_data.clear()
-            st.cache_resource.clear()
-            
-            st.success(f"✅ {len([q for q in new_asset_quantities.values() if isinstance(q, dict) and q.get('quantidade', 0) > 0])} quantidade(s) salva(s)!")
-            st.balloons()
-            st.rerun()
-            
-        except Exception as e:
-            st.error(f"❌ Erro ao salvar: {e}")
-            st.error("💡 Tente novamente ou use o script: python adicionar_quantidade_direta.py")
+            try:
+                new_asset_quantities = dict(ASSET_QUANTITIES)
+                tickers_para_buscar_preco = []
+                
+                # Processa quantidades US
+                if "qty_us_df" in st.session_state and st.session_state.qty_us_df is not None:
+                    for _, row in st.session_state.qty_us_df.iterrows():
+                        ticker = str(row["Ticker"]).strip().upper()
+                        qty = row["Quantidade"]
+                        
+                        if not ticker or pd.isna(ticker) or ticker == "" or ticker == "NAN":
+                            continue
+                        
+                        if pd.notna(qty) and qty > 0:
+                            if ticker in new_asset_quantities and isinstance(new_asset_quantities[ticker], dict):
+                                new_asset_quantities[ticker]["quantidade"] = float(qty)
+                            else:
+                                new_asset_quantities[ticker] = {
+                                    "quantidade": float(qty),
+                                    "preco_entrada": None,
+                                    "data_entrada": datetime.now().strftime("%Y-%m-%d")
+                                }
+                                tickers_para_buscar_preco.append(ticker)
+                
+                # Processa quantidades BR
+                if "qty_br_df" in st.session_state and st.session_state.qty_br_df is not None:
+                    for _, row in st.session_state.qty_br_df.iterrows():
+                        ticker = str(row["Ticker"]).strip().upper()
+                        qty = row["Quantidade"]
+                        
+                        if not ticker or pd.isna(ticker) or ticker == "" or ticker == "NAN":
+                            continue
+                        
+                        if pd.notna(qty) and qty > 0:
+                            if ticker in new_asset_quantities and isinstance(new_asset_quantities[ticker], dict):
+                                new_asset_quantities[ticker]["quantidade"] = float(qty)
+                            else:
+                                new_asset_quantities[ticker] = {
+                                    "quantidade": float(qty),
+                                    "preco_entrada": None,
+                                    "data_entrada": datetime.now().strftime("%Y-%m-%d")
+                                }
+                                tickers_para_buscar_preco.append(ticker)
+                
+                # Busca preços para novos tickers
+                if tickers_para_buscar_preco:
+                    with st.spinner(f"Buscando preços para {len(tickers_para_buscar_preco)} ativo(s)..."):
+                        for ticker in tickers_para_buscar_preco:
+                            try:
+                                stock = yf.Ticker(ticker)
+                                hist = stock.history(period="1d")
+                                if not hist.empty:
+                                    preco_atual = hist['Close'].iloc[-1]
+                                    new_asset_quantities[ticker]["preco_entrada"] = float(preco_atual)
+                            except:
+                                new_asset_quantities[ticker]["preco_entrada"] = 0.0
+                
+                # Salva apenas as quantidades (preserva todo o resto)
+                portfolio_to_save = {
+                    "US_STOCKS": US_STOCKS,
+                    "BR_FIIS": BR_FIIS,
+                    "TESOURO_DIRETO": TESOURO_DIRETO,
+                    "ASSET_QUANTITIES": new_asset_quantities,
+                    "PARAMETROS": PARAMETROS,
+                    "INDIVIDUAL_MULTIPLIERS": INDIVIDUAL_MULTIPLIERS,
+                    "OPERATIONS_HISTORY": OPERATIONS_HISTORY,
+                    "PORTFOLIO_SNAPSHOTS": PORTFOLIO_SNAPSHOTS
+                }
+                save_user_portfolio(current_username, portfolio_to_save)
+                
+                # Atualiza variável global
+                ASSET_QUANTITIES.clear()
+                ASSET_QUANTITIES.update(new_asset_quantities)
+                
+                # Limpa cache para forçar recálculo das tabelas
+                st.cache_data.clear()
+                st.cache_resource.clear()
+                
+                st.success(f"✅ {len([q for q in new_asset_quantities.values() if isinstance(q, dict) and q.get('quantidade', 0) > 0])} quantidade(s) salva(s)!")
+                st.balloons()
+                st.rerun()
+                
+            except Exception as e:
+                st.error(f"❌ Erro ao salvar: {e}")
+                st.error("💡 Tente novamente ou use o script: python adicionar_quantidade_direta.py")
 
 # --- Registrar Operação ---
 with st.sidebar.expander("📝 Registrar Operação (Compra/Venda)", expanded=False):
