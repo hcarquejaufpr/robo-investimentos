@@ -2077,6 +2077,237 @@ if analise_btc:
     st.plotly_chart(fig, use_container_width=True)
     
     st.caption(f"📅 Última atualização: {analise_btc['ultima_atualizacao']}")
+    
+    # Guia de interpretação
+    st.markdown("---")
+    with st.expander("📚 Como Interpretar os Indicadores do Bitcoin", expanded=False):
+        st.markdown("""
+        ## 🎓 Guia Completo de Análise Técnica
+        
+        ### 📊 RSI (Relative Strength Index)
+        **O que é:** Mede a força relativa do ativo, indicando se está sobrecomprado ou sobrevendido.
+        
+        - **RSI < 30** 🟢 **SOBREVENDIDO**
+          - Ativo pode estar "barato demais"
+          - Possível reversão para alta
+          - ✅ Oportunidade de compra (mas confirme outros indicadores)
+        
+        - **RSI 30-50** 🟡 **NEUTRO BAIXISTA**
+          - Força moderada, sem extremos
+          - Tendência de queda ou lateral
+          - ⚠️ Aguarde confirmação
+        
+        - **RSI 50-70** 🟡 **NEUTRO ALTISTA**
+          - Força moderada positiva
+          - Tendência de alta sem exageros
+          - ✅ Normal em mercado saudável
+        
+        - **RSI > 70** 🔴 **SOBRECOMPRADO**
+          - Ativo pode estar "caro demais"
+          - Possível correção à vista
+          - ⚠️ Cuidado com novas compras, considere realizar lucros
+        
+        ---
+        
+        ### 📈 MACD (Moving Average Convergence Divergence)
+        **O que é:** Mostra a relação entre duas médias móveis, indicando mudanças no momentum.
+        
+        - **MACD acima da Linha de Sinal** 🟢 **MOMENTUM POSITIVO**
+          - Histograma positivo (barras verdes)
+          - Força compradora aumentando
+          - ✅ Sinal de continuação de alta
+        
+        - **MACD cruza acima da Linha de Sinal** 🟢🟢 **CRUZAMENTO DE COMPRA**
+          - Mudança de tendência para alta
+          - ✅ Sinal forte de entrada
+        
+        - **MACD abaixo da Linha de Sinal** 🔴 **MOMENTUM NEGATIVO**
+          - Histograma negativo (barras vermelhas)
+          - Força vendedora aumentando
+          - ⚠️ Sinal de continuação de queda
+        
+        - **MACD cruza abaixo da Linha de Sinal** 🔴🔴 **CRUZAMENTO DE VENDA**
+          - Mudança de tendência para baixa
+          - ⚠️ Sinal forte de saída
+        
+        ---
+        
+        ### 📉 Médias Móveis (MM 20, MM 50, MM 200)
+        **O que são:** Preço médio dos últimos X dias. Indicam tendência de curto, médio e longo prazo.
+        
+        - **MM 20 (Verde)** - Curto prazo (últimos 20 dias)
+          - Mais sensível a mudanças rápidas
+          - Indica tendência imediata
+        
+        - **MM 50 (Laranja)** - Médio prazo (últimos 50 dias)
+          - Equilibra sensibilidade e estabilidade
+          - Indica tendência intermediária
+        
+        - **MM 200 (Vermelha)** - Longo prazo (últimos 200 dias)
+          - Linha de tendência principal
+          - Suporte/resistência importante
+        
+        **Interpretação:**
+        - **Preço acima de todas as MMs** 🟢🟢 **FORTE ALTA**
+          - Tendência altista confirmada
+          - ✅ Momento favorável
+        
+        - **MM 50 > MM 200** (Golden Cross) 🟢 **SINAL DE ALTA**
+          - Cruzamento altista de longo prazo
+          - ✅ Forte indicação de bull market
+        
+        - **Preço abaixo de todas as MMs** 🔴🔴 **FORTE BAIXA**
+          - Tendência baixista confirmada
+          - ⚠️ Evitar compras, aguardar reversão
+        
+        - **MM 50 < MM 200** (Death Cross) 🔴 **SINAL DE BAIXA**
+          - Cruzamento baixista de longo prazo
+          - ⚠️ Forte indicação de bear market
+        
+        ---
+        
+        ### 📊 Bandas de Bollinger
+        **O que são:** Envelope de volatilidade que mostra quando o preço está muito alto ou muito baixo.
+        
+        - **Preço na Banda Inferior** 🟢 **POSSÍVEL RECUPERAÇÃO**
+          - Ativo está temporariamente "descontado"
+          - Volatilidade empurrou preço para baixo
+          - ✅ Oportunidade de compra (80% das vezes o preço volta ao centro)
+        
+        - **Preço no Centro** 🟡 **NEUTRO**
+          - Preço está na média
+          - Sem sinais extremos
+          - ➡️ Aguardar direção
+        
+        - **Preço na Banda Superior** 🔴 **POSSÍVEL CORREÇÃO**
+          - Ativo está temporariamente "caro"
+          - Volatilidade empurrou preço para cima
+          - ⚠️ Possível realização de lucros (80% das vezes o preço volta ao centro)
+        
+        - **Bandas Apertando** 📊 **BAIXA VOLATILIDADE**
+          - Período de calmaria
+          - ⚡ Movimento forte pode vir a seguir
+        
+        - **Bandas Abrindo** 📊 **ALTA VOLATILIDADE**
+          - Movimento forte em andamento
+          - ⚠️ Maior risco e oportunidade
+        
+        ---
+        
+        ### 🔊 Volume Relativo
+        **O que é:** Compara o volume atual com a média dos últimos 20 dias.
+        
+        - **Volume > 150%** 🔴/🟢 **MOVIMENTO FORTE**
+          - Volume muito acima da média
+          - Confirma movimentos de preço
+          - ⚠️ Atenção: decisão importante do mercado
+        
+        - **Volume 70-150%** 🟡 **VOLUME NORMAL**
+          - Negociação regular
+          - Movimentos de preço menos confiáveis
+        
+        - **Volume < 70%** ⚠️ **VOLUME FRACO**
+          - Poucos participantes
+          - Movimentos de preço podem ser falsos
+          - 👁️ Não confie em rompimentos com volume fraco
+        
+        **Regra de Ouro:** Volume alto confirma tendências, volume baixo gera dúvidas.
+        
+        ---
+        
+        ### 🎯 Sistema de Score (-100 a +100)
+        
+        O score combina TODOS os indicadores para dar uma recomendação final:
+        
+        | Score | Recomendação | Significado |
+        |-------|--------------|-------------|
+        | **> 40** | 🟢🟢 **COMPRA FORTE** | Múltiplos indicadores altistas alinhados. Alta probabilidade de ganho. |
+        | **15 a 40** | 🟢 **COMPRA** | Maioria dos indicadores favoráveis. Bom momento para entrar. |
+        | **-15 a 15** | 🟡 **NEUTRO** | Indicadores mistos. Mercado indeciso. Aguarde definição. |
+        | **-40 a -15** | 🔴 **VENDA** | Maioria dos indicadores desfavoráveis. Considere sair. |
+        | **< -40** | 🔴🔴 **VENDA FORTE** | Múltiplos indicadores baixistas. Alta probabilidade de perda. |
+        
+        ---
+        
+        ### 📈 Tendência
+        
+        Baseada nas variações de preço:
+        
+        - **📈📈 ALTA FORTE**: Subiu >10% no mês E >5% na semana
+        - **📈 ALTA**: Variações positivas consistentes
+        - **➡️ LATERAL**: Sem direção clara, consolidação
+        - **📉 BAIXA**: Variações negativas consistentes
+        - **📉📉 BAIXA FORTE**: Caiu >10% no mês E >5% na semana
+        
+        ---
+        
+        ### 💡 Dicas Práticas
+        
+        #### ✅ Cenário Ideal para COMPRA:
+        1. RSI entre 30-50 (recuperando de sobrevenda)
+        2. MACD cruzando acima da linha de sinal
+        3. Preço acima da MM 50
+        4. Preço próximo da banda inferior de Bollinger
+        5. Volume acima de 120%
+        6. **Score > 40**
+        
+        #### ⚠️ Cenário Ideal para VENDA:
+        1. RSI acima de 70 (sobrecomprado)
+        2. MACD cruzando abaixo da linha de sinal
+        3. Preço abaixo da MM 50
+        4. Preço próximo da banda superior de Bollinger
+        5. Volume em queda
+        6. **Score < -40**
+        
+        #### 🟡 Quando AGUARDAR:
+        1. Indicadores conflitantes
+        2. Volume muito baixo
+        3. Bandas de Bollinger apertadas (antes do movimento)
+        4. Score entre -15 e 15
+        
+        ---
+        
+        ### ⚠️ Avisos Importantes
+        
+        1. **Análise técnica NÃO garante resultados**
+           - Indicadores mostram probabilidades, não certezas
+           - Sempre use stop loss
+        
+        2. **Combine múltiplos indicadores**
+           - Nunca opere baseado em apenas um sinal
+           - O score já faz isso automaticamente
+        
+        3. **Bitcoin é MUITO volátil**
+           - Oscilações de 10%+ em um dia são normais
+           - Nunca invista mais do que pode perder
+        
+        4. **Gerenciamento de risco é essencial**
+           - Defina stop loss ANTES de comprar
+           - Não coloque todos os ovos na mesma cesta
+           - Lucro pequeno garantido > lucro grande imaginário
+        
+        5. **Contexto macro importa**
+           - Notícias podem invalidar análise técnica
+           - Eventos regulatórios afetam criptomoedas
+           - Decisões de governos e bancos centrais têm impacto
+        
+        ---
+        
+        ### 📚 Glossário Rápido
+        
+        - **Bull Market**: Mercado em alta prolongada
+        - **Bear Market**: Mercado em baixa prolongada
+        - **Suporte**: Nível de preço onde compras costumam aparecer
+        - **Resistência**: Nível de preço onde vendas costumam aparecer
+        - **Breakout**: Rompimento de suporte/resistência
+        - **Consolidação**: Período lateral, sem tendência clara
+        - **Correção**: Queda temporária em tendência de alta
+        - **Rally**: Subida forte e rápida
+        
+        ---
+        
+        **🎯 Use esta análise como ferramenta de apoio, não como única fonte de decisão!**
+        """)
 
 else:
     st.error("""
