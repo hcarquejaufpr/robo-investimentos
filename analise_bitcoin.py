@@ -9,6 +9,7 @@ import numpy as np
 from datetime import datetime, timedelta
 import ssl
 import os
+import requests
 
 # Desabilita verificação SSL (necessário em algumas redes corporativas)
 ssl._create_default_https_context = ssl._create_unverified_context
@@ -305,9 +306,94 @@ def analisar_tendencia(df):
         "ultima_atualizacao": datetime.now().strftime("%d/%m/%Y %H:%M:%S")
     }
 
+def obter_fear_greed_index():
+    """
+    Obtém o Fear & Greed Index da API do Alternative.me
+    
+    Returns:
+        Dicionário com dados do índice ou None em caso de erro
+    """
+    try:
+        url = "https://api.alternative.me/fng/?limit=10"
+        response = requests.get(url, timeout=10, verify=False)
+        
+        if response.status_code == 200:
+            data = response.json()
+            
+            if 'data' in data and len(data['data']) > 0:
+                # Dados atuais (primeiro item)
+                current = data['data'][0]
+                valor = int(current['value'])
+                classificacao = current['value_classification']
+                timestamp = current['timestamp']
+                
+                # Dados históricos (últimos 7 dias)
+                historico = []
+                for item in data['data'][:7]:
+                    historico.append({
+                        'valor': int(item['value']),
+                        'data': datetime.fromtimestamp(int(item['timestamp'])).strftime('%d/%m/%Y')
+                    })
+                
+                # Calcula variação em relação a ontem
+                if len(data['data']) > 1:
+                    ontem = int(data['data'][1]['value'])
+                    variacao = valor - ontem
+                else:
+                    variacao = 0
+                
+                # Determina emoji e interpretação
+                if valor <= 25:
+                    emoji = "😱"
+                    interpretacao = "MEDO EXTREMO"
+                    cor = "#dc3545"  # vermelho
+                    recomendacao = "Oportunidade de compra - Mercado em pânico"
+                elif valor <= 45:
+                    emoji = "😰"
+                    interpretacao = "MEDO"
+                    cor = "#fd7e14"  # laranja
+                    recomendacao = "Possível oportunidade - Sentimento negativo"
+                elif valor <= 55:
+                    emoji = "😐"
+                    interpretacao = "NEUTRO"
+                    cor = "#ffc107"  # amarelo
+                    recomendacao = "Mercado equilibrado - Aguardar sinais"
+                elif valor <= 75:
+                    emoji = "😊"
+                    interpretacao = "GANÂNCIA"
+                    cor = "#28a745"  # verde
+                    recomendacao = "Cuidado com euforia - Considere realizar lucros"
+                else:
+                    emoji = "🤑"
+                    interpretacao = "GANÂNCIA EXTREMA"
+                    cor = "#17a2b8"  # azul
+                    recomendacao = "Alerta de topo - Momento de cautela extrema"
+                
+                return {
+                    'valor': valor,
+                    'classificacao': classificacao,
+                    'interpretacao': interpretacao,
+                    'emoji': emoji,
+                    'cor': cor,
+                    'variacao': variacao,
+                    'recomendacao': recomendacao,
+                    'historico': historico,
+                    'timestamp': datetime.fromtimestamp(int(timestamp)).strftime('%d/%m/%Y %H:%M:%S'),
+                    'sucesso': True
+                }
+        
+        return None
+    
+    except requests.exceptions.RequestException as e:
+        print(f"Erro ao obter Fear & Greed Index: {e}")
+        return None
+    except Exception as e:
+        print(f"Erro inesperado ao obter Fear & Greed Index: {e}")
+        return None
+
 def obter_analise_completa():
     """
-    Obtém análise completa do Bitcoin
+    Obtém análise completa do Bitcoin incluindo Fear & Greed Index
     
     Returns:
         Dicionário com todos os dados e análises
@@ -319,5 +405,12 @@ def obter_analise_completa():
     analise = analisar_tendencia(df)
     if analise:
         analise['dataframe'] = df
+        
+        # Adiciona Fear & Greed Index
+        fear_greed = obter_fear_greed_index()
+        if fear_greed:
+            analise['fear_greed'] = fear_greed
+        else:
+            analise['fear_greed'] = None
     
     return analise

@@ -1852,6 +1852,170 @@ if analise_btc:
             f"Score: {analise_btc['score']:.0f}/100"
         )
     
+    # Fear & Greed Index
+    if analise_btc.get('fear_greed'):
+        st.markdown("---")
+        st.subheader("😱 Fear & Greed Index (Índice do Medo e Ganância)")
+        
+        fg = analise_btc['fear_greed']
+        
+        # Métricas do Fear & Greed
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            st.metric(
+                "📊 Índice Atual",
+                f"{fg['valor']}/100",
+                f"{fg['variacao']:+d} pts vs ontem" if fg['variacao'] != 0 else "Sem mudança"
+            )
+        
+        with col2:
+            st.markdown(f"""
+            <div style='text-align: center; padding: 10px; background-color: {fg['cor']}; border-radius: 10px; color: white;'>
+                <h1 style='margin: 0; font-size: 3em;'>{fg['emoji']}</h1>
+                <h3 style='margin: 5px 0;'>{fg['interpretacao']}</h3>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col3:
+            st.info(f"**{fg['classificacao'].upper()}**")
+            st.caption(f"Atualizado em: {fg['timestamp']}")
+        
+        with col4:
+            # Barra de progresso visual
+            st.progress(fg['valor'] / 100)
+            
+            # Escala visual
+            if fg['valor'] <= 25:
+                st.error("🔴 Zona de Medo Extremo")
+            elif fg['valor'] <= 45:
+                st.warning("🟠 Zona de Medo")
+            elif fg['valor'] <= 55:
+                st.info("🟡 Zona Neutra")
+            elif fg['valor'] <= 75:
+                st.success("🟢 Zona de Ganância")
+            else:
+                st.success("🔵 Zona de Ganância Extrema")
+        
+        # Interpretação e recomendação
+        st.markdown(f"""
+        #### 💡 Interpretação:
+        {fg['recomendacao']}
+        """)
+        
+        # Histórico dos últimos 7 dias
+        with st.expander("📈 Histórico (7 dias)", expanded=False):
+            df_historico = pd.DataFrame(fg['historico'])
+            
+            # Gráfico de linha do histórico
+            fig_fg = go.Figure()
+            
+            fig_fg.add_trace(go.Scatter(
+                x=df_historico['data'],
+                y=df_historico['valor'],
+                mode='lines+markers',
+                name='Fear & Greed',
+                line=dict(color='purple', width=3),
+                marker=dict(size=10)
+            ))
+            
+            # Linhas de referência
+            fig_fg.add_hline(y=25, line_dash="dash", line_color="red", 
+                            annotation_text="Medo Extremo", annotation_position="right")
+            fig_fg.add_hline(y=45, line_dash="dash", line_color="orange", 
+                            annotation_text="Medo", annotation_position="right")
+            fig_fg.add_hline(y=55, line_dash="dash", line_color="yellow", 
+                            annotation_text="Neutro", annotation_position="right")
+            fig_fg.add_hline(y=75, line_dash="dash", line_color="green", 
+                            annotation_text="Ganância", annotation_position="right")
+            
+            fig_fg.update_layout(
+                title="Evolução do Fear & Greed Index",
+                xaxis_title="Data",
+                yaxis_title="Índice (0-100)",
+                yaxis=dict(range=[0, 100]),
+                height=400
+            )
+            
+            st.plotly_chart(fig_fg, use_container_width=True)
+            
+            # Tabela com valores
+            st.dataframe(
+                df_historico,
+                column_config={
+                    "data": "Data",
+                    "valor": st.column_config.NumberColumn("Índice", format="%d/100")
+                },
+                hide_index=True,
+                use_container_width=True
+            )
+        
+        # Explicação do Fear & Greed Index
+        with st.expander("❓ O que é o Fear & Greed Index?", expanded=False):
+            st.markdown("""
+            ### 📚 Índice do Medo e Ganância
+            
+            O **Fear & Greed Index** é um indicador específico para criptomoedas criado pela Alternative.me 
+            que mede o sentimento geral do mercado em uma escala de **0 a 100**.
+            
+            #### 🎯 Como é calculado:
+            
+            O índice combina 6 fatores diferentes:
+            
+            1. **Volatilidade (25%)** - Compara volatilidade atual com médias históricas
+            2. **Momentum/Volume (25%)** - Analisa volume e momentum de compra
+            3. **Redes Sociais (15%)** - Sentimento em Twitter, Reddit, etc.
+            4. **Pesquisas Google (10%)** - Tendências de busca relacionadas ao Bitcoin
+            5. **Dominância do Bitcoin (10%)** - Participação do BTC no mercado total
+            6. **Tendências (15%)** - Análise de trends em múltiplas fontes
+            
+            #### 📊 Como interpretar:
+            
+            | Faixa | Sentimento | Significado | Ação Sugerida |
+            |-------|------------|-------------|---------------|
+            | **0-25** | 😱 **MEDO EXTREMO** | Investidores em pânico, possível capitulação | ✅ **Oportunidade de compra** - "Seja ganancioso quando outros têm medo" |
+            | **26-45** | 😰 **MEDO** | Mercado receoso, sentimento negativo predomina | ✅ **Acumular** - Bom momento para entrada gradual |
+            | **46-55** | 😐 **NEUTRO** | Mercado equilibrado, sem extremos | 🟡 **Aguardar** - Mercado sem direção clara |
+            | **56-75** | 😊 **GANÂNCIA** | Otimismo crescente, euforia começando | ⚠️ **Cautela** - Considere realizar lucros parciais |
+            | **76-100** | 🤑 **GANÂNCIA EXTREMA** | Euforia máxima, possível topo de mercado | 🔴 **Vender/Proteger** - Risco de correção iminente |
+            
+            #### 💡 Filosofia do Investimento Contrarian:
+            
+            - **"Seja ganancioso quando outros têm medo"** (Warren Buffett)
+              - Medo extremo = Oportunidade de compra
+              - Ganância extrema = Momento de cautela
+            
+            - **Por que funciona?**
+              - Mercados tendem a exagerar em ambas direções
+              - Extremos de emoção criam distorções de preço
+              - Oportunidades aparecem quando há pânico ou euforia
+            
+            #### ⚠️ Limitações:
+            
+            1. Não considera fundamentos (adoção, regulação, tecnologia)
+            2. Pode permanecer em extremos por períodos prolongados
+            3. Deve ser usado em conjunto com análise técnica
+            4. Não é garantia de reversão imediata
+            
+            #### 🎯 Como usar na prática:
+            
+            ✅ **Combine com outros indicadores:**
+            - Fear & Greed baixo + RSI baixo + Price na banda inferior = Forte compra
+            - Fear & Greed alto + RSI alto + Price na banda superior = Forte venda
+            
+            ✅ **Use como confirmação:**
+            - Análise técnica diz COMPRA + Fear & Greed em medo = Reforça sinal
+            - Análise técnica diz VENDA + Fear & Greed em ganância = Reforça sinal
+            
+            ⚠️ **Cuidado com divergências:**
+            - Preço subindo + Fear & Greed caindo = Força compradora fraca
+            - Preço caindo + Fear & Greed alto = Ainda não capitulou
+            
+            ---
+            
+            **🔗 Fonte:** [Alternative.me Fear & Greed Index](https://alternative.me/crypto/fear-and-greed-index/)
+            """)
+    
     # Painel de sinais e indicadores
     st.markdown("---")
     st.subheader("📊 Indicadores Técnicos")
