@@ -47,19 +47,6 @@ def get_db_connection():
     try:
         yield conn
         conn.commit()
-        print(f"🔍 [DEBUG] Após commit - BACKUP_ENABLED = {BACKUP_ENABLED}")
-        # Backup automático após commit
-        if BACKUP_ENABLED:
-            print("🔍 [DEBUG] BACKUP_ENABLED é True, chamando auto_backup()...")
-            try:
-                backup_manager.auto_backup()
-                print("✅ [BACKUP] auto_backup() executado com sucesso")
-            except Exception as e:
-                print(f"❌ [BACKUP] Erro em auto_backup(): {e}")
-                import traceback
-                traceback.print_exc()
-        else:
-            print("⚠️ [DEBUG] BACKUP_ENABLED é False, backup não executado")
     except Exception as e:
         conn.rollback()
         raise e
@@ -281,6 +268,40 @@ def save_user_portfolio(username, portfolio):
                 json.dumps(portfolio.get('PORTFOLIO_SNAPSHOTS', []))
             )
         )
+        
+        # Backup automático no Google Sheets APÓS salvar no SQLite
+        if BACKUP_ENABLED:
+            try:
+                print(f"🔍 [DEBUG] Executando backup para {username}...")
+                backup = backup_manager.get_backup_manager()
+                if backup:
+                    # Converte para DataFrame para backup
+                    import pandas as pd
+                    carteira_data = []
+                    for stock in portfolio.get('US_STOCKS', []):
+                        carteira_data.append({
+                            'Tipo': 'US_STOCK',
+                            'Ativo': stock,
+                            'Quantidade': portfolio.get('ASSET_QUANTITIES', {}).get(stock, 0)
+                        })
+                    for fii in portfolio.get('BR_FIIS', []):
+                        carteira_data.append({
+                            'Tipo': 'BR_FII',
+                            'Ativo': fii,
+                            'Quantidade': portfolio.get('ASSET_QUANTITIES', {}).get(fii, 0)
+                        })
+                    
+                    if carteira_data:
+                        df = pd.DataFrame(carteira_data)
+                        backup.salvar_carteira(username, df)
+                        print(f"✅ [BACKUP] Backup executado para {username}")
+                    else:
+                        print(f"⚠️ [BACKUP] Carteira vazia, backup não executado")
+            except Exception as e:
+                print(f"⚠️ [BACKUP] Erro ao fazer backup: {e}")
+                import traceback
+                traceback.print_exc()
+        
         return True
 
 def load_all_portfolios():

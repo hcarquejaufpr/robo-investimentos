@@ -11,6 +11,7 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import database as db
+import analise_bitcoin as btc_analysis
 
 # Limpa cache do Streamlit para forçar recarregamento
 st.cache_data.clear()
@@ -1799,6 +1800,331 @@ def analyze_taxes(carteira):
     return pd.DataFrame(results)
 
 # --- EXECUÇÃO DO LAYOUT ---
+
+# 0. Análise de Bitcoin
+st.header("₿ Análise de Bitcoin (BTC-USD)")
+
+with st.spinner("🔄 Carregando dados do Bitcoin..."):
+    analise_btc = btc_analysis.obter_analise_completa()
+
+if analise_btc:
+    # Métricas principais
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.metric(
+            "💵 Preço Atual",
+            f"${analise_btc['preco_atual']:,.2f}",
+            f"{analise_btc['var_dia']:+.2f}%",
+            delta_color="normal"
+        )
+    
+    with col2:
+        cor_tendencia = "normal" if analise_btc['var_semana'] >= 0 else "inverse"
+        st.metric(
+            "📊 Var. 7 dias",
+            f"{analise_btc['var_semana']:+.2f}%",
+            f"{analise_btc['tendencia']} {analise_btc['emoji_tendencia']}",
+            delta_color=cor_tendencia
+        )
+    
+    with col3:
+        cor_mes = "normal" if analise_btc['var_mes'] >= 0 else "inverse"
+        st.metric(
+            "📈 Var. 30 dias",
+            f"{analise_btc['var_mes']:+.2f}%",
+            analise_btc['emoji_tendencia'],
+            delta_color=cor_mes
+        )
+    
+    with col4:
+        # Determina cor da recomendação
+        if "COMPRA" in analise_btc['recomendacao']:
+            cor_rec = "🟢"
+        elif "VENDA" in analise_btc['recomendacao']:
+            cor_rec = "🔴"
+        else:
+            cor_rec = "🟡"
+        
+        st.metric(
+            "🎯 Recomendação",
+            analise_btc['recomendacao'],
+            f"Score: {analise_btc['score']:.0f}/100"
+        )
+    
+    # Painel de sinais e indicadores
+    st.markdown("---")
+    st.subheader("📊 Indicadores Técnicos")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("### 📈 Análise Técnica")
+        
+        # RSI
+        rsi_cor = "🔴" if analise_btc['rsi'] > 70 else "🟢" if analise_btc['rsi'] < 30 else "🟡"
+        st.metric("RSI (14)", f"{analise_btc['rsi']:.1f}", rsi_cor)
+        
+        if analise_btc['rsi'] > 70:
+            st.caption("⚠️ Sobrecomprado - Possível correção")
+        elif analise_btc['rsi'] < 30:
+            st.caption("✅ Sobrevendido - Possível recuperação")
+        else:
+            st.caption("➡️ Zona neutra")
+        
+        # MACD
+        st.metric("MACD", f"{analise_btc['macd']:.2f}")
+        st.caption(f"Sinal: {analise_btc['sinal_macd']:.2f} | Histograma: {analise_btc['histogram_macd']:.2f}")
+        
+        # Volatilidade
+        st.metric("Volatilidade", f"{analise_btc['volatilidade']:.2f}%")
+        if analise_btc['volatilidade'] > 5:
+            st.caption("⚠️ Alta volatilidade - Maior risco")
+        else:
+            st.caption("✅ Volatilidade moderada")
+    
+    with col2:
+        st.markdown("### 🎯 Médias Móveis")
+        
+        for periodo, valor in analise_btc['medias_moveis'].items():
+            if valor:
+                periodo_num = periodo.replace("SMA_", "")
+                diff_pct = ((analise_btc['preco_atual'] - valor) / valor) * 100
+                cor = "🟢" if diff_pct > 0 else "🔴"
+                st.metric(f"MM {periodo_num}", f"${valor:,.2f}", f"{cor} {diff_pct:+.2f}%")
+        
+        # Bandas de Bollinger
+        st.markdown("### 📊 Bandas de Bollinger")
+        st.metric("Banda Superior", f"${analise_btc['bollinger_superior']:,.2f}")
+        st.metric("Banda Inferior", f"${analise_btc['bollinger_inferior']:,.2f}")
+        
+        # Posição nas bandas
+        range_bb = analise_btc['bollinger_superior'] - analise_btc['bollinger_inferior']
+        pos_bb = ((analise_btc['preco_atual'] - analise_btc['bollinger_inferior']) / range_bb) * 100
+        
+        if pos_bb > 80:
+            st.caption("⚠️ Próximo da banda superior - Possível correção")
+        elif pos_bb < 20:
+            st.caption("✅ Próximo da banda inferior - Possível recuperação")
+        else:
+            st.caption(f"➡️ Posição: {pos_bb:.0f}% do range")
+    
+    # Sinais de Trading
+    st.markdown("---")
+    st.subheader("🚦 Sinais de Trading")
+    
+    # Cria DataFrame com os sinais
+    df_sinais = pd.DataFrame(analise_btc['sinais'])
+    
+    # Colorir baseado no sinal
+    def colorir_sinal(row):
+        if row['sinal'] == 'COMPRA':
+            return ['background-color: #d4edda'] * len(row)
+        elif row['sinal'] == 'VENDA':
+            return ['background-color: #f8d7da'] * len(row)
+        else:
+            return ['background-color: #fff3cd'] * len(row)
+    
+    st.dataframe(
+        df_sinais.style.apply(colorir_sinal, axis=1),
+        column_config={
+            "indicador": "Indicador",
+            "sinal": "Sinal",
+            "forca": "Força",
+            "valor": "Valor"
+        },
+        hide_index=True,
+        use_container_width=True
+    )
+    
+    # Resumo da recomendação
+    st.markdown("---")
+    st.subheader("🎯 Recomendação Final")
+    
+    if "COMPRA FORTE" in analise_btc['recomendacao']:
+        st.success(f"""
+        ### {analise_btc['emoji_recomendacao']} {analise_btc['recomendacao']}
+        
+        **Score: {analise_btc['score']:.0f}/100**
+        
+        Múltiplos indicadores sugerem **oportunidade de compra**. O Bitcoin está apresentando sinais técnicos 
+        favoráveis com bom potencial de valorização. Considere:
+        
+        - ✅ Entrada em posição ou aumento de exposição
+        - 📊 Definir stop loss em ${analise_btc['bollinger_inferior']:,.2f} (Banda inferior de Bollinger)
+        - 🎯 Alvo de curto prazo: ${analise_btc['bollinger_superior']:,.2f} (Banda superior)
+        - ⚠️ Sempre opere com gerenciamento de risco adequado
+        """)
+    
+    elif "COMPRA" in analise_btc['recomendacao']:
+        st.info(f"""
+        ### {analise_btc['emoji_recomendacao']} {analise_btc['recomendacao']}
+        
+        **Score: {analise_btc['score']:.0f}/100**
+        
+        Indicadores técnicos inclinados para **compra moderada**. O Bitcoin mostra sinais positivos, mas com 
+        cautela. Considere:
+        
+        - ✅ Entrada gradual em posição
+        - 📊 Stop loss sugerido: ${analise_btc['bollinger_inferior']:,.2f}
+        - 🎯 Monitorar evolução dos indicadores
+        - ⚠️ Aguardar confirmação de tendência
+        """)
+    
+    elif "VENDA FORTE" in analise_btc['recomendacao']:
+        st.error(f"""
+        ### {analise_btc['emoji_recomendacao']} {analise_btc['recomendacao']}
+        
+        **Score: {analise_btc['score']:.0f}/100**
+        
+        Múltiplos indicadores sugerem **pressão vendedora**. O Bitcoin está apresentando sinais técnicos 
+        desfavoráveis. Considere:
+        
+        - 🔴 Realização de lucros ou saída de posição
+        - 📊 Aguardar correção para novas entradas
+        - ⚠️ Proteção de capital é prioridade
+        - 👁️ Monitorar níveis de suporte
+        """)
+    
+    elif "VENDA" in analise_btc['recomendacao']:
+        st.warning(f"""
+        ### {analise_btc['emoji_recomendacao']} {analise_btc['recomendacao']}
+        
+        **Score: {analise_btc['score']:.0f}/100**
+        
+        Indicadores técnicos sugerem **cautela com viés de venda**. Considere:
+        
+        - 🔴 Realizar lucros parciais
+        - 📊 Apertar stops de proteção
+        - 👁️ Monitorar evolução antes de novas entradas
+        - ⚠️ Reduzir exposição temporariamente
+        """)
+    
+    else:
+        st.info(f"""
+        ### {analise_btc['emoji_recomendacao']} {analise_btc['recomendacao']}
+        
+        **Score: {analise_btc['score']:.0f}/100**
+        
+        Indicadores técnicos **sem direção clara**. O Bitcoin está em lateral ou consolidação. Considere:
+        
+        - 🟡 Aguardar sinais mais claros
+        - 📊 Manter posições atuais se existentes
+        - 👁️ Observar rompimentos de suporte/resistência
+        - ⚠️ Evitar operações impulsivas
+        """)
+    
+    # Informações adicionais
+    with st.expander("📊 Informações Adicionais", expanded=False):
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("### 📈 Máximas e Mínimas")
+            st.metric("Máxima 52 semanas", f"${analise_btc['maxima_52w']:,.2f}", 
+                     f"{analise_btc['dist_maxima']:+.2f}%")
+            st.metric("Mínima 52 semanas", f"${analise_btc['minima_52w']:,.2f}", 
+                     f"{analise_btc['dist_minima']:+.2f}%")
+        
+        with col2:
+            st.markdown("### 🔊 Volume")
+            st.metric("Volume Relativo", f"{analise_btc['volume_relativo']:.0f}%")
+            if analise_btc['volume_relativo'] > 150:
+                st.caption("⚠️ Volume acima da média - Movimento significativo")
+            elif analise_btc['volume_relativo'] < 70:
+                st.caption("➡️ Volume abaixo da média - Movimento fraco")
+            else:
+                st.caption("✅ Volume normal")
+    
+    # Gráfico de preço
+    st.markdown("---")
+    st.subheader("📈 Gráfico de Preço (90 dias)")
+    
+    df_btc = analise_btc['dataframe'].tail(90)
+    
+    fig = go.Figure()
+    
+    # Candlestick
+    fig.add_trace(go.Candlestick(
+        x=df_btc.index,
+        open=df_btc['Open'],
+        high=df_btc['High'],
+        low=df_btc['Low'],
+        close=df_btc['Close'],
+        name='BTC-USD'
+    ))
+    
+    # Médias móveis
+    for periodo in [20, 50]:
+        if f'SMA_{periodo}' in df_btc.columns:
+            ma_value = df_btc['Close'].rolling(window=periodo).mean()
+            fig.add_trace(go.Scatter(
+                x=df_btc.index,
+                y=ma_value,
+                mode='lines',
+                name=f'MM {periodo}',
+                line=dict(width=1)
+            ))
+    
+    fig.update_layout(
+        title="Bitcoin (BTC-USD) - Últimos 90 dias",
+        xaxis_title="Data",
+        yaxis_title="Preço (USD)",
+        hovermode='x unified',
+        height=500,
+        xaxis_rangeslider_visible=False
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
+    
+    st.caption(f"📅 Última atualização: {analise_btc['ultima_atualizacao']}")
+
+else:
+    st.error("""
+    ❌ **Erro ao carregar dados do Bitcoin**
+    
+    Não foi possível obter os dados do Bitcoin neste momento. Possíveis causas:
+    - Problemas de conexão com a API do Yahoo Finance
+    - Certificado SSL precisa ser configurado
+    - Dados temporariamente indisponíveis
+    
+    ### 🔧 Soluções rápidas:
+    
+    **No PowerShell (antes de executar o Streamlit):**
+    ```powershell
+    $env:PYTHONHTTPSVERIFY="0"
+    $env:CURL_CA_BUNDLE=""
+    streamlit run main.py
+    ```
+    
+    **No CMD:**
+    ```cmd
+    set PYTHONHTTPSVERIFY=0
+    set CURL_CA_BUNDLE=
+    streamlit run main.py
+    ```
+    
+    **Ou atualize o yfinance:**
+    ```bash
+    pip install --upgrade yfinance
+    ```
+    
+    📖 Consulte [ANALISE_BITCOIN.md](ANALISE_BITCOIN.md) para mais informações.
+    """)
+    
+    # Mostra dados simulados apenas para demonstração do layout
+    with st.expander("📊 Visualizar layout de exemplo", expanded=False):
+        st.info("""
+        Esta seção mostrará análise completa do Bitcoin quando os dados estiverem disponíveis:
+        
+        - 💵 Preço atual e variações (dia, semana, mês)
+        - 📊 Indicadores técnicos: RSI, MACD, Médias Móveis, Bandas de Bollinger
+        - 🚦 Sinais de trading automáticos
+        - 🎯 Recomendação (COMPRA/VENDA/NEUTRO) com score de -100 a +100
+        - 📈 Gráfico interativo com candlesticks
+        - 📈 Análise de tendência e volume
+        """)
+
+st.markdown("---")
 
 # 1. Análise de Ações e FIIs
 st.header("📊 Renda Variável: Ações e FIIs")
