@@ -689,12 +689,19 @@ with st.sidebar.expander("📧 Notificações Diárias", expanded=False):
             st.success("✅ Configurações salvas!")
         
         st.info("""
-        📱 **Funcionalidades futuras:**
-        - ✉️ Email diário com resumo
-        - 💬 WhatsApp via API (Twilio)
-        - 🔔 Alertas instantâneos
+        ✅ **Notificações Automáticas Disponíveis!**
         
-        ⚠️ Requer configuração de servidor SMTP ou API externa.
+        As configurações foram salvas, mas para receber emails **automaticamente**
+        todo dia, é necessário configurar o GitHub Actions.
+        
+        📖 **[Clique aqui para ver o guia completo](https://github.com/hcarquejaufpr/robo-investimentos/blob/main/CONFIGURAR_NOTIFICACOES_AUTOMATICAS.md)**
+        
+        ⚡ **Rápido e gratuito:** Leva 15 minutos para configurar!
+        
+        Após configurar, você receberá emails automáticos com:
+        - 📊 Resumo da carteira
+        - ⚠️ Alertas de stop loss
+        - 📈 Ganhos e perdas
         """)
     
     if st.button("🧪 Testar Notificação Agora", disabled=not enable_notifications, width='stretch'):

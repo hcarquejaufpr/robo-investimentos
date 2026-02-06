@@ -1,0 +1,124 @@
+name: Enviar Notificações Diárias
+
+on:
+  schedule:
+    # Executa todo dia às 09:00 BRT (12:00 UTC)
+    # Para mudar o horário, ajuste aqui: minuto hora * * *
+    # Exemplo: '0 13' para 10:00 BRT, '30 11' para 08:30 BRT
+    - cron: '0 12 * * *'
+  
+  # Permite executar manualmente pela interface do GitHub
+  workflow_dispatch:
+
+jobs:
+  send-notifications:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout código
+        uses: actions/checkout@v3
+      
+      - name: 🐍 Configurar Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      
+      - name: 📦 Instalar dependências
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: 🔧 Criar diretório de dados
+        run: |
+          mkdir -p data
+      
+      - name: 📥 Baixar banco de dados do Google Sheets
+        env:
+          GCP_SERVICE_ACCOUNT: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+        run: |
+          echo "Criando arquivo de credenciais..."
+          echo '${{ secrets.GCP_SERVICE_ACCOUNT }}' > gen-lang-client.json
+          
+          echo "Restaurando dados do Google Sheets..."
+          python -c "
+import json
+import sqlite3
+import gspread
+from google.oauth2.service_account import Credentials
+from backup_manager import BackupManager
+import database as db
+
+# Inicializa banco
+db.init_database()
+
+print('Conectando ao Google Sheets...')
+backup = BackupManager(credentials_file='gen-lang-client.json')
+
+# Busca todos os usuários
+sheet = backup.spreadsheet.worksheet('Usuarios')
+users = sheet.get_all_records()
+
+for user in users:
+    username = user.get('Username')
+    if not username:
+        continue
+    
+    print(f'Restaurando carteira de {username}...')
+    df = backup.carregar_carteira(username)
+    
+    if not df.empty:
+        # Converte para portfolio
+        portfolio = db.load_user_portfolio(username) or {
+            'US_STOCKS': [], 'BR_FIIS': [], 'TESOURO_DIRETO': {},
+            'ASSET_QUANTITIES': {}, 'PARAMETROS': {},
+            'INDIVIDUAL_MULTIPLIERS': {}, 'OPERATIONS_HISTORY': [],
+            'PORTFOLIO_SNAPSHOTS': [], 'NOTIFICATIONS': {}
+        }
+        
+        br_fiis = []
+        us_stocks = []
+        asset_quantities = {}
+        
+        for _, row in df.iterrows():
+            tipo = row.get('Tipo', '')
+            ativo = row.get('Ativo', '')
+            quantidade = row.get('Quantidade', 0)
+            preco = row.get('Preço Entrada', 0)
+            data = row.get('Data Entrada', '')
+            
+            if tipo == 'BR_FII' and ativo:
+                br_fiis.append(ativo)
+            elif tipo == 'US_STOCK' and ativo:
+                us_stocks.append(ativo)
+            
+            if ativo and quantidade:
+                asset_quantities[ativo] = {
+                    'quantidade': float(quantidade),
+                    'preco_entrada': float(preco) if preco else 0.0,
+                    'data_entrada': str(data)
+                }
+        
+        portfolio['BR_FIIS'] = br_fiis
+        portfolio['US_STOCKS'] = us_stocks
+        portfolio['ASSET_QUANTITIES'] = asset_quantities
+        
+        db.save_user_portfolio(username, portfolio)
+        print(f'  ✅ Carteira restaurada')
+
+print('✅ Dados sincronizados!')
+          "
+      
+      - name: 📧 Enviar notificações
+        env:
+          SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+        run: |
+          echo "Enviando notificações diárias..."
+          python send_daily_notifications.py
+      
+      - name: 🧹 Limpar credenciais
+        if: always()
+        run: |
+          rm -f gen-lang-client.json
