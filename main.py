@@ -808,6 +808,55 @@ if st.sidebar.button("🔄 Atualizar Cotações", help="Recarrega os dados do me
     # Força atualização da página
     st.rerun()
 
+# Botão para restaurar do Google Sheets
+if st.sidebar.button("📥 Restaurar do Google Sheets", help="Restaura sua carteira do backup do Google Sheets. Use se os dados estiverem desatualizados.", type="secondary"):
+    try:
+        from backup_manager import BackupManager
+        backup = BackupManager()
+        df_carteira = backup.carregar_carteira(current_username)
+        
+        if not df_carteira.empty:
+            # Converter DataFrame para formato do portfolio
+            br_fiis = []
+            us_stocks = []
+            asset_quantities = {}
+            
+            for _, row in df_carteira.iterrows():
+                tipo = row.get('Tipo', '')
+                ativo = row.get('Ativo', '')
+                quantidade = row.get('Quantidade', 0)
+                preco_entrada = row.get('Preço Entrada', 0.0)
+                data_entrada = row.get('Data Entrada', '')
+                
+                if tipo == 'BR_FII' and ativo not in br_fiis:
+                    br_fiis.append(ativo)
+                elif tipo == 'US_STOCK' and ativo not in us_stocks:
+                    us_stocks.append(ativo)
+                
+                if quantidade and quantidade > 0:
+                    asset_quantities[ativo] = {
+                        'quantidade': float(quantidade),
+                        'preco_entrada': float(preco_entrada) if preco_entrada else 0.0,
+                        'data_entrada': str(data_entrada) if data_entrada else ''
+                    }
+            
+            # Atualizar portfolio
+            user_portfolio['BR_FIIS'] = br_fiis
+            user_portfolio['US_STOCKS'] = us_stocks
+            user_portfolio['ASSET_QUANTITIES'] = asset_quantities
+            
+            # Salvar no banco
+            if save_user_portfolio(current_username, user_portfolio):
+                st.sidebar.success(f"✅ Restaurado! {len(asset_quantities)} ativo(s) com quantidade")
+                st.cache_data.clear()
+                st.rerun()
+            else:
+                st.sidebar.error("❌ Erro ao salvar no banco")
+        else:
+            st.sidebar.warning("⚠️ Nenhum dado encontrado no Google Sheets")
+    except Exception as e:
+        st.sidebar.error(f"❌ Erro ao restaurar: {str(e)}")
+
 # --- Editor de Ativos ---
 st.sidebar.markdown("---")
 st.sidebar.header("📝 Gerenciar Ativos")
