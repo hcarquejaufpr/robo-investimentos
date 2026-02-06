@@ -309,16 +309,32 @@ def save_user_portfolio(username, portfolio):
                     import pandas as pd
                     carteira_data = []
                     for stock in portfolio.get('US_STOCKS', []):
+                        # Extrai quantidade do dict (novo formato) ou usa valor direto (formato antigo)
+                        asset_info = portfolio.get('ASSET_QUANTITIES', {}).get(stock, 0)
+                        quantidade = asset_info.get('quantidade', 0) if isinstance(asset_info, dict) else asset_info
+                        preco_entrada = asset_info.get('preco_entrada', 0.0) if isinstance(asset_info, dict) else 0.0
+                        data_entrada = asset_info.get('data_entrada', '') if isinstance(asset_info, dict) else ''
+                        
                         carteira_data.append({
                             'Tipo': 'US_STOCK',
                             'Ativo': stock,
-                            'Quantidade': portfolio.get('ASSET_QUANTITIES', {}).get(stock, 0)
+                            'Quantidade': quantidade,
+                            'Preço Entrada': preco_entrada,
+                            'Data Entrada': data_entrada
                         })
                     for fii in portfolio.get('BR_FIIS', []):
+                        # Extrai quantidade do dict (novo formato) ou usa valor direto (formato antigo)
+                        asset_info = portfolio.get('ASSET_QUANTITIES', {}).get(fii, 0)
+                        quantidade = asset_info.get('quantidade', 0) if isinstance(asset_info, dict) else asset_info
+                        preco_entrada = asset_info.get('preco_entrada', 0.0) if isinstance(asset_info, dict) else 0.0
+                        data_entrada = asset_info.get('data_entrada', '') if isinstance(asset_info, dict) else ''
+                        
                         carteira_data.append({
                             'Tipo': 'BR_FII',
                             'Ativo': fii,
-                            'Quantidade': portfolio.get('ASSET_QUANTITIES', {}).get(fii, 0)
+                            'Quantidade': quantidade,
+                            'Preço Entrada': preco_entrada,
+                            'Data Entrada': data_entrada
                         })
                     
                     if carteira_data:
