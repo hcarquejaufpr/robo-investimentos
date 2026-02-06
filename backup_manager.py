@@ -11,16 +11,35 @@ print("🔍 [BACKUP] Carregando módulo...")
 
 class BackupManager:
     def __init__(self, credentials_file='gen-lang-client-0919671346-30ffdbafba47.json'):
-        if not os.path.exists(credentials_file):
-            raise FileNotFoundError(f"Credenciais não encontradas: {credentials_file}")
-        
         scopes = [
             'https://www.googleapis.com/auth/spreadsheets',
             'https://www.googleapis.com/auth/drive'
         ]
-        creds = Credentials.from_service_account_file(credentials_file, scopes=scopes)
+        
+        # Tenta carregar do Streamlit secrets primeiro (Streamlit Cloud)
+        try:
+            import streamlit as st
+            if hasattr(st, 'secrets') and 'gcp_service_account' in st.secrets:
+                print("🔍 [BACKUP] Usando credenciais do Streamlit secrets...")
+                creds = Credentials.from_service_account_info(
+                    st.secrets["gcp_service_account"],
+                    scopes=scopes
+                )
+                sheet_name = st.secrets.get("backup_sheet_name", "RoboInvestimentos_Backup")
+                print("✅ [BACKUP] Credenciais carregadas do Streamlit secrets")
+            else:
+                raise KeyError("gcp_service_account não encontrado nos secrets")
+        except (ImportError, KeyError):
+            # Fallback: usa arquivo JSON local (desenvolvimento)
+            print("🔍 [BACKUP] Usando arquivo de credenciais local...")
+            if not os.path.exists(credentials_file):
+                raise FileNotFoundError(f"Credenciais não encontradas: {credentials_file}")
+            creds = Credentials.from_service_account_file(credentials_file, scopes=scopes)
+            sheet_name = "RoboInvestimentos_Backup"
+            print(f"✅ [BACKUP] Credenciais carregadas de {credentials_file}")
+        
         self.client = gspread.authorize(creds)
-        self.spreadsheet = self.client.open('RoboInvestimentos_Backup')
+        self.spreadsheet = self.client.open(sheet_name)
         print(f"✅ Conectado: {self.spreadsheet.title}")
     
     def salvar_carteira(self, username, df_carteira):
