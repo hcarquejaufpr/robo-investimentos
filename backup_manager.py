@@ -77,8 +77,71 @@ class BackupManager:
         except:
             return pd.DataFrame()
     
+    def salvar_usuarios(self, users_dict):
+        """Salva todos os usuários na aba Usuarios"""
+        try:
+            sheet_name = "Usuarios"
+            try:
+                worksheet = self.spreadsheet.worksheet(sheet_name)
+            except:
+                worksheet = self.spreadsheet.add_worksheet(title=sheet_name, rows=100, cols=10)
+            
+            # Limpa e adiciona cabeçalho
+            worksheet.clear()
+            worksheet.append_row(['Username', 'Password', 'Name', 'Email', 'Created_At'])
+            
+            # Adiciona usuários
+            for username, data in users_dict.items():
+                row = [
+                    username,
+                    data.get('password', ''),
+                    data.get('name', ''),
+                    data.get('email', ''),
+                    data.get('created_at', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+                ]
+                worksheet.append_row(row)
+            
+            print(f"✅ Backup usuários: {len(users_dict)} salvos")
+            return True
+        except Exception as e:
+            print(f"❌ Erro backup usuários: {e}")
+            return False
+    
+    def carregar_usuarios(self):
+        """Carrega todos os usuários da aba Usuarios"""
+        try:
+            sheet_name = "Usuarios"
+            worksheet = self.spreadsheet.worksheet(sheet_name)
+            data = worksheet.get_all_records()
+            
+            users_dict = {}
+            for row in data:
+                username = row.get('Username', '')
+                if username:
+                    users_dict[username] = {
+                        'password': row.get('Password', ''),
+                        'name': row.get('Name', ''),
+                        'email': row.get('Email', ''),
+                        'created_at': row.get('Created_At', '')
+                    }
+            
+            print(f"✅ Restore usuários: {len(users_dict)} carregados")
+            return users_dict
+        except Exception as e:
+            print(f"⚠️ Aba Usuarios não encontrada ou erro: {e}")
+            return {}
+    
     def listar_usuarios(self):
         try:
+            # Tenta primeiro da aba Usuarios
+            try:
+                users_dict = self.carregar_usuarios()
+                if users_dict:
+                    return list(users_dict.keys())
+            except:
+                pass
+            
+            # Fallback: lista por abas de carteira
             worksheets = self.spreadsheet.worksheets()
             usuarios = set()
             for ws in worksheets:
@@ -109,5 +172,25 @@ def auto_backup(username, portfolio_data):
     except Exception as e:
         print(f"⚠️ Backup falhou: {e}")
         return False
+
+def backup_usuarios(users_dict):
+    """Faz backup de todos os usuários no Google Sheets"""
+    try:
+        backup = get_backup_manager()
+        if backup:
+            return backup.salvar_usuarios(users_dict)
+    except Exception as e:
+        print(f"⚠️ Backup usuários falhou: {e}")
+        return False
+
+def restore_usuarios():
+    """Restaura usuários do Google Sheets"""
+    try:
+        backup = get_backup_manager()
+        if backup:
+            return backup.carregar_usuarios()
+    except Exception as e:
+        print(f"⚠️ Restore usuários falhou: {e}")
+        return {}
 
 print("✅ [BACKUP] Módulo carregado com sucesso")

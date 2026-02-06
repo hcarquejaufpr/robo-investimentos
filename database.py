@@ -127,7 +127,7 @@ def init_database():
 # ============================================================================
 
 def backup_users():
-    """Faz backup dos usuários em arquivo JSON."""
+    """Faz backup dos usuários em arquivo JSON e Google Sheets."""
     try:
         users = {}
         with get_db_connection() as conn:
@@ -142,8 +142,16 @@ def backup_users():
                     'email': row['email'] if row['email'] else ''
                 }
         
+        # Backup local (JSON)
         with open(BACKUP_PATH, 'w', encoding='utf-8') as f:
             json.dump(users, f, indent=2, ensure_ascii=False)
+        
+        # Backup remoto (Google Sheets) se disponível
+        if BACKUP_ENABLED:
+            try:
+                backup_manager.backup_usuarios(users)
+            except Exception as e:
+                print(f"⚠️ Backup Google Sheets falhou: {e}")
         
         return True
     except Exception as e:
@@ -151,30 +159,52 @@ def backup_users():
         return False
 
 def restore_users_from_backup():
-    """Restaura usuários do arquivo de backup."""
-    try:
-        if not os.path.exists(BACKUP_PATH):
+    """Restaura usuários do Google Sheets ou arquivo de backup local."""
+    users = {}
+    
+    # Tenta restaurar do Google Sheets primeiro
+    if BACKUP_ENABLED:
+        try:
+            print("🔍 Tentando restaurar usuários do Google Sheets...")
+            users = backup_manager.restore_usuarios()
+            if users:
+                print(f"✅ {len(users)} usuários encontrados no Google Sheets")
+        except Exception as e:
+            print(f"⚠️ Erro ao restaurar do Google Sheets: {e}")
+    
+    # Fallback: tenta arquivo JSON local
+    if not users and os.path.exists(BACKUP_PATH):
+        try:
+            print("🔍 Tentando restaurar usuários do backup JSON local...")
+            with open(BACKUP_PATH, 'r', encoding='utf-8') as f:
+                users = json.load(f)
+            if users:
+                print(f"✅ {len(users)} usuários encontrados no backup local")
+        except Exception as e:
+            print(f"⚠️ Erro ao restaurar do backup local: {e}")
+    
+    # Se encontrou usuários, restaura no banco
+    if users:
+        try:
+            with get_db_connection() as conn:
+                cursor = conn.cursor()
+                for username, data in users.items():
+                    # Verifica se usuário já existe
+                    cursor.execute('SELECT COUNT(*) FROM users WHERE username = ?', (username,))
+                    if cursor.fetchone()[0] == 0:
+                        cursor.execute(
+                            'INSERT INTO users (username, password, name, email) VALUES (?, ?, ?, ?)',
+                            (username, data['password'], data['name'], data.get('email', ''))
+                        )
+                conn.commit()
+            print(f"✅ Usuários restaurados com sucesso no banco SQLite")
+            return True
+        except Exception as e:
+            print(f"❌ Erro ao restaurar no banco: {e}")
             return False
-        
-        with open(BACKUP_PATH, 'r', encoding='utf-8') as f:
-            users = json.load(f)
-        
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            for username, data in users.items():
-                # Verifica se usuário já existe
-                cursor.execute('SELECT COUNT(*) FROM users WHERE username = ?', (username,))
-                if cursor.fetchone()[0] == 0:
-                    cursor.execute(
-                        'INSERT INTO users (username, password, name, email) VALUES (?, ?, ?, ?)',
-                        (username, data['password'], data['name'], data.get('email', ''))
-                    )
-            conn.commit()
-        
-        return True
-    except Exception as e:
-        print(f"Erro ao restaurar backup: {e}")
-        return False
+    
+    print("⚠️ Nenhum backup de usuários encontrado")
+    return False
 
 # ============================================================================
 # FUNÇÕES DE USUÁRIOS
