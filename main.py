@@ -440,6 +440,24 @@ INDIVIDUAL_MULTIPLIERS = user_portfolio.get("INDIVIDUAL_MULTIPLIERS", {})
 # Quantidades de ativos (para cálculo de ganho/perda)
 ASSET_QUANTITIES = user_portfolio.get("ASSET_QUANTITIES", {})
 
+# 🔧 CORREÇÃO AUTOMÁTICA: Converte formato antigo (int) para novo (dict)
+format_updated = False
+for ticker, value in list(ASSET_QUANTITIES.items()):
+    if isinstance(value, (int, float)):
+        # Formato antigo detectado - converter para dict
+        ASSET_QUANTITIES[ticker] = {
+            'quantidade': float(value),
+            'preco_entrada': 0.0,
+            'data_entrada': datetime.now().strftime("%Y-%m-%d")
+        }
+        format_updated = True
+
+# Se corrigiu formato, salva automaticamente
+if format_updated:
+    user_portfolio['ASSET_QUANTITIES'] = ASSET_QUANTITIES
+    save_user_portfolio(current_username, user_portfolio)
+    st.sidebar.info("🔧 Formato de quantidades atualizado automaticamente")
+
 # DEBUG: Mostra quantidades carregadas (temporário)
 if ASSET_QUANTITIES:
     st.sidebar.success(f"✅ {len(ASSET_QUANTITIES)} quantidades carregadas!")
