@@ -254,7 +254,7 @@ def login_register_page():
         with st.form("login_form"):
             username = st.text_input("Usuário", key="login_username")
             password = st.text_input("Senha", type="password", key="login_password")
-            submit = st.form_submit_button("Entrar", type="primary", use_container_width=True)
+            submit = st.form_submit_button("Entrar", type="primary", width='stretch')
         
         if submit:
             users = load_users()
@@ -293,7 +293,7 @@ def login_register_page():
             new_email = st.text_input("Seu email (para receber notificações)", key="reg_email", placeholder="exemplo@email.com")
             new_password = st.text_input("Escolha uma senha", type="password", key="reg_password")
             new_password2 = st.text_input("Confirme a senha", type="password", key="reg_password2")
-            register = st.form_submit_button("Cadastrar", type="primary", use_container_width=True)
+            register = st.form_submit_button("Cadastrar", type="primary", width='stretch')
             
             if register:
                 # Validações
@@ -481,7 +481,7 @@ with col1:
     st.title("🤖 Painel de Estratégia de Saída (2026)")
 with col2:
     st.markdown(f"### 👤 {st.session_state.get('user_name', 'Usuário')}")
-    if st.button("🚪 Sair", use_container_width=True):
+    if st.button("🚪 Sair", width='stretch'):
         st.session_state.clear()
         st.rerun()
 
@@ -678,7 +678,7 @@ with st.sidebar.expander("📧 Notificações Diárias", expanded=False):
             value=datetime.strptime(user_portfolio.get("NOTIFICATIONS", {}).get("time", "09:00"), "%H:%M").time()
         )
         
-        if st.button("💾 Salvar Configurações", use_container_width=True):
+        if st.button("💾 Salvar Configurações", width='stretch'):
             if not user_portfolio.get("NOTIFICATIONS"):
                 user_portfolio["NOTIFICATIONS"] = {}
             
@@ -697,7 +697,7 @@ with st.sidebar.expander("📧 Notificações Diárias", expanded=False):
         ⚠️ Requer configuração de servidor SMTP ou API externa.
         """)
     
-    if st.button("🧪 Testar Notificação Agora", disabled=not enable_notifications, use_container_width=True):
+    if st.button("🧪 Testar Notificação Agora", disabled=not enable_notifications, width='stretch'):
         if not notification_email:
             st.error("❌ Configure um email para receber as notificações!")
         else:
@@ -823,7 +823,7 @@ with st.sidebar.expander("🇺🇸 Ações e ETFs (EUA)", expanded=False):
     
     st.markdown("---")
     
-    if st.button("💾 Salvar Ações US", key="save_us_stocks", type="primary", use_container_width=True):
+    if st.button("💾 Salvar Ações US", key="save_us_stocks", type="primary", width='stretch'):
         new_us_stocks = [line.strip() for line in us_stocks_text.split('\n') if line.strip()]
         portfolio_to_save = {
             "US_STOCKS": new_us_stocks,
@@ -854,7 +854,7 @@ with st.sidebar.expander("🇧🇷 FIIs Brasileiros", expanded=False):
     st.markdown("---")
     st.write("")  # Espaço extra
     
-    if st.button("💾 Salvar FIIs BR", key="save_br_fiis", type="primary", use_container_width=True):
+    if st.button("💾 Salvar FIIs BR", key="save_br_fiis", type="primary", width='stretch'):
         new_br_fiis = [line.strip() for line in br_fiis_text.split('\n') if line.strip()]
         portfolio_to_save = {
             "US_STOCKS": US_STOCKS,
@@ -903,7 +903,7 @@ Tesouro Prefixado 2029 | 2024-08-20 | 2000""",
             key="tesouro_bulk"
         )
         
-        if st.button("📥 Importar Títulos", key="import_tesouro_bulk", type="primary", use_container_width=True):
+        if st.button("📥 Importar Títulos", key="import_tesouro_bulk", type="primary", width='stretch'):
             if bulk_text:
                 new_tesouro = {}
                 lines_processed = 0
@@ -1024,11 +1024,11 @@ Tesouro Prefixado 2029 | 2024-08-20 | 2000""",
             },
             num_rows="dynamic",
             hide_index=True,
-            use_container_width=True,
+            width='stretch',
             key="tesouro_editor"
         )
         
-        if st.button("💾 Salvar Tesouro Direto", key="save_tesouro_table", type="primary", use_container_width=True):
+        if st.button("💾 Salvar Tesouro Direto", key="save_tesouro_table", type="primary", width='stretch'):
             new_tesouro = {}
             for _, row in edited_tesouro.iterrows():
                 nome = str(row["Nome do Título"]).strip()
@@ -1082,9 +1082,9 @@ Tesouro Prefixado 2029 | 2024-08-20 | 2000""",
                 df_upload = pd.read_csv(uploaded_file, sep=None, engine='python')
                 
                 st.write("**Preview dos dados:**")
-                st.dataframe(df_upload.head(), use_container_width=True)
+                st.dataframe(df_upload.head(), width='stretch')
                 
-                if st.button("📥 Importar do CSV", key="import_csv", type="primary", use_container_width=True):
+                if st.button("📥 Importar do CSV", key="import_csv", type="primary", width='stretch'):
                     new_tesouro = {}
                     
                     # Detecta colunas (flexível com nomes diferentes)
@@ -1175,7 +1175,7 @@ with st.sidebar.expander("🎯 Multiplicador ATR por Ativo", expanded=False):
     
     st.markdown("---")
     
-    if st.button("💾 Salvar Multiplicadores", key="save_mults", type="primary", use_container_width=True):
+    if st.button("💾 Salvar Multiplicadores", key="save_mults", type="primary", width='stretch'):
         new_individual_multipliers = {}
         for line in individual_mult_text.split('\n'):
             line = line.strip()
@@ -1259,7 +1259,7 @@ with st.sidebar.expander("📊 Quantidades de Ativos", expanded=False):
             },
             num_rows="dynamic",  # Permite adicionar/remover linhas
             hide_index=True,
-            use_container_width=True,
+            width='stretch',
             key="qty_us_editor"
         )
         
@@ -1307,7 +1307,7 @@ with st.sidebar.expander("📊 Quantidades de Ativos", expanded=False):
             },
             num_rows="dynamic",  # Permite adicionar/remover linhas
             hide_index=True,
-            use_container_width=True,
+            width='stretch',
             key="qty_br_editor"
         )
         
@@ -1318,7 +1318,7 @@ with st.sidebar.expander("📊 Quantidades de Ativos", expanded=False):
         st.markdown("---")
         st.markdown("### 💾 Clique aqui para salvar as quantidades:")
         
-        if st.button("💾 SALVAR QUANTIDADES AGORA", type="primary", use_container_width=True, key="save_quantities_main"):
+        if st.button("💾 SALVAR QUANTIDADES AGORA", type="primary", width='stretch', key="save_quantities_main"):
             try:
                 new_asset_quantities = dict(ASSET_QUANTITIES)
                 tickers_para_buscar_preco = []
@@ -1424,7 +1424,7 @@ with st.sidebar.expander("📝 Registrar Operação (Compra/Venda)", expanded=Fa
     op_date = st.date_input("Data", value=datetime.now(), key="op_date")
     op_notes = st.text_input("Observações (opcional)", key="op_notes", placeholder="Ex: Stop loss acionado")
     
-    if st.button("➕ Adicionar Operação", type="primary", use_container_width=True):
+    if st.button("➕ Adicionar Operação", type="primary", width='stretch'):
         if op_ticker:
             new_operation = {
                 "data": op_date.strftime("%Y-%m-%d"),
@@ -1959,7 +1959,7 @@ if analise_btc:
                 height=400
             )
             
-            st.plotly_chart(fig_fg, use_container_width=True)
+            st.plotly_chart(fig_fg, width='stretch')
             
             # Tabela com valores
             st.dataframe(
@@ -1969,7 +1969,7 @@ if analise_btc:
                     "valor": st.column_config.NumberColumn("Índice", format="%d/100")
                 },
                 hide_index=True,
-                use_container_width=True
+                width='stretch'
             )
         
         # Explicação do Fear & Greed Index
@@ -2120,7 +2120,7 @@ if analise_btc:
             "valor": "Valor"
         },
         hide_index=True,
-        use_container_width=True
+        width='stretch'
     )
     
     # Resumo da recomendação
@@ -2472,7 +2472,7 @@ if analise_btc:
         xaxis_rangeslider_visible=False
     )
     
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
     
     st.caption(f"📅 Última atualização: {analise_btc['ultima_atualizacao']}")
     
@@ -2888,7 +2888,7 @@ if US_STOCKS:
                 
                 st.dataframe(
                     debug_df,
-                    use_container_width=True,
+                    width='stretch',
                     hide_index=True
                 )
             
@@ -2922,7 +2922,7 @@ if US_STOCKS:
         # Configura colunas editáveis
         edited_df_us = st.data_editor(
             df_us_sorted[display_columns],
-            use_container_width=True,
+            width='stretch',
             column_config={
                 "Recomendação": st.column_config.TextColumn(
                     "🎯 Ação",
@@ -3139,7 +3139,7 @@ if US_STOCKS:
                 showlegend=True
             )
             
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
             
             # Informações adicionais
             col_det1, col_det2 = st.columns(2)
@@ -3328,7 +3328,7 @@ if BR_FIIS:
         # Configura colunas editáveis - USA EXATAMENTE MESMA CONFIG QUE US_STOCKS
         edited_df_br = st.data_editor(
             df_br_sorted[display_columns_br],
-            use_container_width=True,
+            width='stretch',
             column_config={
                 "Recomendação": st.column_config.TextColumn(
                     "🎯 Ação",
@@ -3608,7 +3608,7 @@ if OPERATIONS_HISTORY:
     
     st.dataframe(
         df_operations_display[["Data", "Tipo", "Ticker", "Qtd", "Preço", "Total", "Observações"]],
-        use_container_width=True,
+        width='stretch',
         hide_index=True
     )
     
@@ -3707,7 +3707,7 @@ if PORTFOLIO_SNAPSHOTS and len(PORTFOLIO_SNAPSHOTS) >= 1:
         height=500
     )
     
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
     
     st.caption("💡 **Dica:** O gráfico é atualizado automaticamente a cada acesso. Triângulos verdes = compras, vermelhos = vendas.")
 
