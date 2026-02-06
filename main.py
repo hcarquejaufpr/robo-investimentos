@@ -1948,13 +1948,60 @@ if analise_btc:
         **Score: {analise_btc['score']:.0f}/100**
         
         Múltiplos indicadores sugerem **oportunidade de compra**. O Bitcoin está apresentando sinais técnicos 
-        favoráveis com bom potencial de valorização. Considere:
-        
-        - ✅ Entrada em posição ou aumento de exposição
-        - 📊 Definir stop loss em ${analise_btc['bollinger_inferior']:,.2f} (Banda inferior de Bollinger)
-        - 🎯 Alvo de curto prazo: ${analise_btc['bollinger_superior']:,.2f} (Banda superior)
-        - ⚠️ Sempre opere com gerenciamento de risco adequado
+        favoráveis com bom potencial de valorização.
         """)
+        
+        # Checklist de critérios para COMPRA
+        st.markdown("#### 💡 Análise dos Critérios de Compra:")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # RSI
+            rsi_ok = 30 <= analise_btc['rsi'] <= 50
+            rsi_icon = "✅" if rsi_ok else "❌"
+            st.markdown(f"{rsi_icon} **RSI entre 30-50**: {analise_btc['rsi']:.1f} {'✓' if rsi_ok else '(fora da faixa ideal)'}")
+            
+            # MACD
+            macd_ok = analise_btc['histogram_macd'] > 0
+            macd_icon = "✅" if macd_ok else "❌"
+            st.markdown(f"{macd_icon} **MACD acima do sinal**: {analise_btc['histogram_macd']:.2f} {'✓' if macd_ok else '(abaixo)'}")
+            
+            # Preço vs MM50
+            preco_mm50 = analise_btc['medias_moveis'].get('SMA_50')
+            if preco_mm50:
+                mm50_ok = analise_btc['preco_atual'] > preco_mm50
+                mm50_icon = "✅" if mm50_ok else "❌"
+                diff_mm50 = ((analise_btc['preco_atual'] - preco_mm50) / preco_mm50) * 100
+                st.markdown(f"{mm50_icon} **Preço acima MM 50**: {diff_mm50:+.1f}% {'✓' if mm50_ok else '(abaixo)'}")
+        
+        with col2:
+            # Bollinger
+            dist_bb_inf = ((analise_btc['preco_atual'] - analise_btc['bollinger_inferior']) / analise_btc['bollinger_inferior']) * 100
+            bb_ok = dist_bb_inf < 5  # Está próximo da banda inferior
+            bb_icon = "✅" if bb_ok else "⚠️"
+            st.markdown(f"{bb_icon} **Próximo banda inferior**: {dist_bb_inf:.1f}% da banda {'✓' if bb_ok else '(distante)'}")
+            
+            # Volume
+            vol_ok = analise_btc['volume_relativo'] > 120
+            vol_icon = "✅" if vol_ok else "⚠️"
+            st.markdown(f"{vol_icon} **Volume acima 120%**: {analise_btc['volume_relativo']:.0f}% {'✓' if vol_ok else '(baixo)'}")
+            
+            # Score
+            score_ok = analise_btc['score'] > 40
+            score_icon = "✅" if score_ok else "❌"
+            st.markdown(f"{score_icon} **Score > 40**: {analise_btc['score']:.0f} {'✓' if score_ok else '(fraco)'}")
+        
+        criterios_atendidos = sum([rsi_ok, macd_ok, mm50_ok if preco_mm50 else False, bb_ok, vol_ok, score_ok])
+        st.info(f"**✓ {criterios_atendidos} de 6 critérios atendidos** - Quanto mais critérios atendidos, maior a probabilidade de sucesso.")
+        
+        st.markdown("""
+        #### 📋 Recomendações:
+        - ✅ Entrada em posição ou aumento de exposição
+        - 📊 Definir stop loss em ${:,.2f} (Banda inferior de Bollinger)
+        - 🎯 Alvo de curto prazo: ${:,.2f} (Banda superior)
+        - ⚠️ Sempre opere com gerenciamento de risco adequado
+        """.format(analise_btc['bollinger_inferior'], analise_btc['bollinger_superior']))
     
     elif "COMPRA" in analise_btc['recomendacao']:
         st.info(f"""
@@ -1962,14 +2009,60 @@ if analise_btc:
         
         **Score: {analise_btc['score']:.0f}/100**
         
-        Indicadores técnicos inclinados para **compra moderada**. O Bitcoin mostra sinais positivos, mas com 
-        cautela. Considere:
+        Indicadores técnicos inclinados para **compra moderada**. O Bitcoin mostra sinais positivos, mas com cautela.
+        """)
         
+        # Checklist de critérios para COMPRA
+        st.markdown("#### 💡 Análise dos Critérios de Compra:")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # RSI
+            rsi_ok = 30 <= analise_btc['rsi'] <= 50
+            rsi_icon = "✅" if rsi_ok else "❌"
+            st.markdown(f"{rsi_icon} **RSI entre 30-50**: {analise_btc['rsi']:.1f} {'✓' if rsi_ok else '(fora da faixa ideal)'}")
+            
+            # MACD
+            macd_ok = analise_btc['histogram_macd'] > 0
+            macd_icon = "✅" if macd_ok else "❌"
+            st.markdown(f"{macd_icon} **MACD acima do sinal**: {analise_btc['histogram_macd']:.2f} {'✓' if macd_ok else '(abaixo)'}")
+            
+            # Preço vs MM50
+            preco_mm50 = analise_btc['medias_moveis'].get('SMA_50')
+            if preco_mm50:
+                mm50_ok = analise_btc['preco_atual'] > preco_mm50
+                mm50_icon = "✅" if mm50_ok else "❌"
+                diff_mm50 = ((analise_btc['preco_atual'] - preco_mm50) / preco_mm50) * 100
+                st.markdown(f"{mm50_icon} **Preço acima MM 50**: {diff_mm50:+.1f}% {'✓' if mm50_ok else '(abaixo)'}")
+        
+        with col2:
+            # Bollinger
+            dist_bb_inf = ((analise_btc['preco_atual'] - analise_btc['bollinger_inferior']) / analise_btc['bollinger_inferior']) * 100
+            bb_ok = dist_bb_inf < 5
+            bb_icon = "✅" if bb_ok else "⚠️"
+            st.markdown(f"{bb_icon} **Próximo banda inferior**: {dist_bb_inf:.1f}% da banda {'✓' if bb_ok else '(distante)'}")
+            
+            # Volume
+            vol_ok = analise_btc['volume_relativo'] > 120
+            vol_icon = "✅" if vol_ok else "⚠️"
+            st.markdown(f"{vol_icon} **Volume acima 120%**: {analise_btc['volume_relativo']:.0f}% {'✓' if vol_ok else '(baixo)'}")
+            
+            # Score
+            score_ok = analise_btc['score'] > 15
+            score_icon = "✅" if score_ok else "❌"
+            st.markdown(f"{score_icon} **Score > 15**: {analise_btc['score']:.0f} {'✓' if score_ok else '(fraco)'}")
+        
+        criterios_atendidos = sum([rsi_ok, macd_ok, mm50_ok if preco_mm50 else False, bb_ok, vol_ok, score_ok])
+        st.info(f"**✓ {criterios_atendidos} de 6 critérios atendidos** - Sinal moderado, considere entrada gradual.")
+        
+        st.markdown("""
+        #### 📋 Recomendações:
         - ✅ Entrada gradual em posição
-        - 📊 Stop loss sugerido: ${analise_btc['bollinger_inferior']:,.2f}
+        - 📊 Stop loss sugerido: ${:,.2f}
         - 🎯 Monitorar evolução dos indicadores
         - ⚠️ Aguardar confirmação de tendência
-        """)
+        """.format(analise_btc['bollinger_inferior']))
     
     elif "VENDA FORTE" in analise_btc['recomendacao']:
         st.error(f"""
@@ -1977,9 +2070,55 @@ if analise_btc:
         
         **Score: {analise_btc['score']:.0f}/100**
         
-        Múltiplos indicadores sugerem **pressão vendedora**. O Bitcoin está apresentando sinais técnicos 
-        desfavoráveis. Considere:
+        Múltiplos indicadores sugerem **pressão vendedora**. O Bitcoin está apresentando sinais técnicos desfavoráveis.
+        """)
         
+        # Checklist de critérios para VENDA
+        st.markdown("#### 💡 Análise dos Critérios de Venda:")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # RSI
+            rsi_venda = analise_btc['rsi'] > 70
+            rsi_icon = "🔴" if rsi_venda else "⚠️"
+            st.markdown(f"{rsi_icon} **RSI acima de 70**: {analise_btc['rsi']:.1f} {'✓ Sobrecomprado' if rsi_venda else '(ainda não extremo)'}")
+            
+            # MACD
+            macd_venda = analise_btc['histogram_macd'] < 0
+            macd_icon = "🔴" if macd_venda else "⚠️"
+            st.markdown(f"{macd_icon} **MACD abaixo do sinal**: {analise_btc['histogram_macd']:.2f} {'✓ Momentum negativo' if macd_venda else '(ainda positivo)'}")
+            
+            # Preço vs MM50
+            preco_mm50 = analise_btc['medias_moveis'].get('SMA_50')
+            if preco_mm50:
+                mm50_venda = analise_btc['preco_atual'] < preco_mm50
+                mm50_icon = "🔴" if mm50_venda else "⚠️"
+                diff_mm50 = ((analise_btc['preco_atual'] - preco_mm50) / preco_mm50) * 100
+                st.markdown(f"{mm50_icon} **Preço abaixo MM 50**: {diff_mm50:+.1f}% {'✓ Tendência baixista' if mm50_venda else '(ainda acima)'}")
+        
+        with col2:
+            # Bollinger
+            dist_bb_sup = ((analise_btc['preco_atual'] - analise_btc['bollinger_superior']) / analise_btc['bollinger_superior']) * 100
+            bb_venda = dist_bb_sup > -5  # Está próximo da banda superior
+            bb_icon = "🔴" if bb_venda else "⚠️"
+            st.markdown(f"{bb_icon} **Próximo banda superior**: {abs(dist_bb_sup):.1f}% da banda {'✓ Sobrecomprado' if bb_venda else '(distante)'}")
+            
+            # Volume em queda
+            vol_queda = analise_btc['volume_relativo'] < 80
+            vol_icon = "🔴" if vol_queda else "⚠️"
+            st.markdown(f"{vol_icon} **Volume em queda**: {analise_btc['volume_relativo']:.0f}% {'✓ Interesse diminuindo' if vol_queda else '(ainda alto)'}")
+            
+            # Score
+            score_venda = analise_btc['score'] < -40
+            score_icon = "🔴" if score_venda else "⚠️"
+            st.markdown(f"{score_icon} **Score < -40**: {analise_btc['score']:.0f} {'✓ Forte venda' if score_venda else '(moderado)'}")
+        
+        criterios_venda_atendidos = sum([rsi_venda, macd_venda, mm50_venda if preco_mm50 else False, bb_venda, vol_queda, score_venda])
+        st.warning(f"**⚠️ {criterios_venda_atendidos} de 6 critérios de venda atendidos** - Quanto mais critérios, maior o risco de queda.")
+        
+        st.markdown("""
+        #### 📋 Recomendações:
         - 🔴 Realização de lucros ou saída de posição
         - 📊 Aguardar correção para novas entradas
         - ⚠️ Proteção de capital é prioridade
@@ -1992,8 +2131,55 @@ if analise_btc:
         
         **Score: {analise_btc['score']:.0f}/100**
         
-        Indicadores técnicos sugerem **cautela com viés de venda**. Considere:
+        Indicadores técnicos sugerem **cautela com viés de venda**. Considere proteger posições.
+        """)
         
+        # Checklist de critérios para VENDA
+        st.markdown("#### 💡 Análise dos Critérios de Venda:")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # RSI
+            rsi_venda = analise_btc['rsi'] > 70
+            rsi_icon = "🔴" if rsi_venda else "⚠️"
+            st.markdown(f"{rsi_icon} **RSI acima de 70**: {analise_btc['rsi']:.1f} {'✓ Sobrecomprado' if rsi_venda else '(ainda não extremo)'}")
+            
+            # MACD
+            macd_venda = analise_btc['histogram_macd'] < 0
+            macd_icon = "🔴" if macd_venda else "⚠️"
+            st.markdown(f"{macd_icon} **MACD abaixo do sinal**: {analise_btc['histogram_macd']:.2f} {'✓ Momentum negativo' if macd_venda else '(ainda positivo)'}")
+            
+            # Preço vs MM50
+            preco_mm50 = analise_btc['medias_moveis'].get('SMA_50')
+            if preco_mm50:
+                mm50_venda = analise_btc['preco_atual'] < preco_mm50
+                mm50_icon = "🔴" if mm50_venda else "⚠️"
+                diff_mm50 = ((analise_btc['preco_atual'] - preco_mm50) / preco_mm50) * 100
+                st.markdown(f"{mm50_icon} **Preço abaixo MM 50**: {diff_mm50:+.1f}% {'✓ Tendência baixista' if mm50_venda else '(ainda acima)'}")
+        
+        with col2:
+            # Bollinger
+            dist_bb_sup = ((analise_btc['preco_atual'] - analise_btc['bollinger_superior']) / analise_btc['bollinger_superior']) * 100
+            bb_venda = dist_bb_sup > -5
+            bb_icon = "🔴" if bb_venda else "⚠️"
+            st.markdown(f"{bb_icon} **Próximo banda superior**: {abs(dist_bb_sup):.1f}% da banda {'✓ Sobrecomprado' if bb_venda else '(distante)'}")
+            
+            # Volume em queda
+            vol_queda = analise_btc['volume_relativo'] < 80
+            vol_icon = "🔴" if vol_queda else "⚠️"
+            st.markdown(f"{vol_icon} **Volume em queda**: {analise_btc['volume_relativo']:.0f}% {'✓ Interesse diminuindo' if vol_queda else '(ainda alto)'}")
+            
+            # Score
+            score_venda = analise_btc['score'] < -15
+            score_icon = "🔴" if score_venda else "⚠️"
+            st.markdown(f"{score_icon} **Score < -15**: {analise_btc['score']:.0f} {'✓ Venda moderada' if score_venda else '(fraco)'}")
+        
+        criterios_venda_atendidos = sum([rsi_venda, macd_venda, mm50_venda if preco_mm50 else False, bb_venda, vol_queda, score_venda])
+        st.warning(f"**⚠️ {criterios_venda_atendidos} de 6 critérios de venda atendidos** - Considere proteger posições.")
+        
+        st.markdown("""
+        #### 📋 Recomendações:
         - 🔴 Realizar lucros parciais
         - 📊 Apertar stops de proteção
         - 👁️ Monitorar evolução antes de novas entradas
@@ -2006,8 +2192,34 @@ if analise_btc:
         
         **Score: {analise_btc['score']:.0f}/100**
         
-        Indicadores técnicos **sem direção clara**. O Bitcoin está em lateral ou consolidação. Considere:
+        Indicadores técnicos **sem direção clara**. O Bitcoin está em lateral ou consolidação.
+        """)
         
+        # Checklist mostrando neutralidade
+        st.markdown("#### 💡 Análise dos Indicadores (Neutro):")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown(f"🟡 **RSI**: {analise_btc['rsi']:.1f} (Zona neutra)")
+            st.markdown(f"🟡 **MACD**: {analise_btc['histogram_macd']:.2f} (Sem direção clara)")
+            
+            preco_mm50 = analise_btc['medias_moveis'].get('SMA_50')
+            if preco_mm50:
+                diff_mm50 = ((analise_btc['preco_atual'] - preco_mm50) / preco_mm50) * 100
+                st.markdown(f"🟡 **Preço vs MM 50**: {diff_mm50:+.1f}% (Próximo)")
+        
+        with col2:
+            dist_bb_inf = ((analise_btc['preco_atual'] - analise_btc['bollinger_inferior']) / analise_btc['bollinger_inferior']) * 100
+            dist_bb_sup = ((analise_btc['preco_atual'] - analise_btc['bollinger_superior']) / analise_btc['bollinger_superior']) * 100
+            st.markdown(f"🟡 **Bollinger**: Entre bandas (meio)")
+            st.markdown(f"🟡 **Volume**: {analise_btc['volume_relativo']:.0f}% (Normal)")
+            st.markdown(f"🟡 **Score**: {analise_btc['score']:.0f} (Neutro)")
+        
+        st.info("**⚠️ Indicadores mistos** - Aguarde sinais mais claros antes de operar.")
+        
+        st.markdown("""
+        #### 📋 Recomendações:
         - 🟡 Aguardar sinais mais claros
         - 📊 Manter posições atuais se existentes
         - 👁️ Observar rompimentos de suporte/resistência
