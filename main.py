@@ -1188,19 +1188,21 @@ with st.sidebar.expander("🎯 Multiplicador ATR por Ativo", expanded=False):
         st.rerun()
 
 # --- Quantidades de Ativos ---
-with st.sidebar.expander("📊 Quantidade de Ativos (Opcional)", expanded=False):
+with st.sidebar.expander("📊 Quantidades de Ativos", expanded=False):
     st.markdown("""
-    **Cadastre quantas ações/cotas você possui!**
+    **📝 Cadastre quantas ações/cotas você possui!**
     
-    Com isso você verá:
-    - 💰 Valor total da posição
+    **Benefícios:**
+    - 💰 Valor total da sua posição
     - 🎯 Ganho potencial em $ (se atingir alvos)
     - 🛑 Perda potencial em $ (se acionar stops)
+    
+    ⚠️ **Importante:** Após editar as tabelas, clique no botão AZUL para salvar!
     """)
     
     # --- 🇺🇸 Quantidades EUA ---
     with st.expander("🇺🇸 Quantidades EUA", expanded=True):
-        st.info("💡 **Edite a tabela abaixo e clique em 'SALVAR QUANTIDADES AGORA' no final para salvar**")
+        st.warning("⚠️ **ATENÇÃO:** Após editar, clique no botão AZUL abaixo da tabela para SALVAR!")
         
         # Prepara DataFrame com TODAS as ações cadastradas
         us_data = []
@@ -1248,7 +1250,7 @@ with st.sidebar.expander("📊 Quantidade de Ativos (Opcional)", expanded=False)
     
     # --- 🇧🇷 Quantidades Brasil ---
     with st.expander("🇧🇷 Quantidades Brasil", expanded=True):
-        st.info("💡 **Edite a tabela abaixo e clique em 'SALVAR QUANTIDADES AGORA' no final para salvar**")
+        st.warning("⚠️ **ATENÇÃO:** Após editar, clique no botão AZUL abaixo da tabela para SALVAR!")
         
         # Prepara DataFrame com TODOS os FIIs cadastrados
         br_data = []
@@ -1293,12 +1295,12 @@ with st.sidebar.expander("📊 Quantidade de Ativos (Opcional)", expanded=False)
         
         # Armazena o DataFrame editado completo
         st.session_state["qty_br_df"] = edited_br_df
-
-# --- BOTÃO PARA SALVAR APENAS QUANTIDADES ---
-with st.sidebar.expander("💾 Salvar Quantidades", expanded=False):
-    st.warning("⚠️ Use este botão para salvar APENAS as quantidades editadas nas tabelas acima")
-    
-    if st.button("💾 SALVAR QUANTIDADES AGORA", type="primary", use_container_width=True):
+        
+        # BOTÃO DE SALVAR - VISÍVEL E DESTACADO
+        st.markdown("---")
+        st.markdown("### 💾 Clique aqui para salvar as quantidades:")
+        
+        if st.button("💾 SALVAR QUANTIDADES AGORA", type="primary", use_container_width=True, key="save_quantities_main"):
         try:
             new_asset_quantities = dict(ASSET_QUANTITIES)
             tickers_para_buscar_preco = []
@@ -1378,10 +1380,12 @@ with st.sidebar.expander("💾 Salvar Quantidades", expanded=False):
             st.cache_resource.clear()
             
             st.success(f"✅ {len([q for q in new_asset_quantities.values() if isinstance(q, dict) and q.get('quantidade', 0) > 0])} quantidade(s) salva(s)!")
+            st.balloons()
             st.rerun()
             
         except Exception as e:
             st.error(f"❌ Erro ao salvar: {e}")
+            st.error("💡 Tente novamente ou use o script: python adicionar_quantidade_direta.py")
 
 # --- Registrar Operação ---
 with st.sidebar.expander("📝 Registrar Operação (Compra/Venda)", expanded=False):
