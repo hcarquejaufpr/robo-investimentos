@@ -416,6 +416,60 @@ US_STOCKS = user_portfolio.get("US_STOCKS", [])
 BR_FIIS = user_portfolio.get("BR_FIIS", [])
 TESOURO_DIRETO = user_portfolio.get("TESOURO_DIRETO", {})
 
+# 🔧 AUTO-RESTAURAÇÃO DO GOOGLE SHEETS (se carteira vazia)
+if not US_STOCKS and not BR_FIIS and not TESOURO_DIRETO:
+    st.sidebar.info("🔍 Carteira vazia detectada. Tentando restaurar do Google Sheets...")
+    try:
+        from backup_manager import BackupManager
+        backup = BackupManager()
+        df_carteira = backup.carregar_carteira(current_username)
+        
+        if not df_carteira.empty:
+            st.sidebar.success(f"✅ Encontrado backup com {len(df_carteira)} ativo(s)!")
+            
+            # Converter DataFrame para formato do portfolio
+            br_fiis = []
+            us_stocks = []
+            asset_quantities = {}
+            
+            for _, row in df_carteira.iterrows():
+                tipo = row.get('Tipo', '')
+                ativo = row.get('Ativo', '')
+                quantidade = row.get('Quantidade', 0)
+                preco_entrada = row.get('Preço Entrada', 0.0)
+                data_entrada = row.get('Data Entrada', '')
+                
+                if tipo == 'BR_FII' and ativo not in br_fiis:
+                    br_fiis.append(ativo)
+                elif tipo == 'US_STOCK' and ativo not in us_stocks:
+                    us_stocks.append(ativo)
+                
+                if quantidade and quantidade > 0:
+                    asset_quantities[ativo] = {
+                        'quantidade': float(quantidade),
+                        'preco_entrada': float(preco_entrada) if preco_entrada else 0.0,
+                        'data_entrada': str(data_entrada) if data_entrada else ''
+                    }
+            
+            # Atualizar variáveis
+            US_STOCKS = us_stocks
+            BR_FIIS = br_fiis
+            user_portfolio['US_STOCKS'] = us_stocks
+            user_portfolio['BR_FIIS'] = br_fiis
+            user_portfolio['ASSET_QUANTITIES'] = asset_quantities
+            
+            # Salvar no banco
+            if save_user_portfolio(current_username, user_portfolio):
+                st.sidebar.success(f"💾 Carteira restaurada automaticamente!")
+                st.cache_data.clear()
+                time.sleep(1)  # Aguarda antes de rerun
+                st.rerun()
+        else:
+            st.sidebar.warning("⚠️ Nenhum backup encontrado no Google Sheets. Adicione ativos manualmente.")
+    except Exception as e:
+        st.sidebar.error(f"❌ Erro ao tentar restaurar: {str(e)}")
+        st.sidebar.info("💡 Você pode usar o botão 'Restaurar do Google Sheets' abaixo se necessário.")
+
 # Enriquece títulos do Tesouro com estratégias (se ainda não tiverem)
 if TESOURO_DIRETO:
     titulos_sem_estrategia = sum(1 for v in TESOURO_DIRETO.values() if isinstance(v, dict) and 'estrategia' not in v)
